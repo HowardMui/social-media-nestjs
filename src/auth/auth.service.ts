@@ -1,0 +1,113 @@
+import { ForbiddenException, Injectable, Res } from '@nestjs/common';
+import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
+import { AuthDto } from './dto';
+import * as argon from 'argon2';
+import { Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private prisma: PrismaSrcService,
+    private jwt: JwtService,
+    private config: ConfigService,
+  ) {}
+
+  async login(dto: AuthDto, @Res() res: Response) {
+    const { email, password } = dto;
+
+    try {
+      const findUser = await this.prisma.user.findUnique({
+        where: { email },
+        include: { UserAuths: true },
+      });
+
+      if (!findUser) {
+        return new ForbiddenException('Cannot find user');
+      }
+
+      //Compare hash password
+      const passwordMatch = await argon.verify(
+        findUser.UserAuths[0].hash,
+        password,
+      );
+      if (!passwordMatch) {
+        return new ForbiddenException('Error in email or password');
+      }
+
+      // return findUser;
+      res
+        .status(200)
+        .cookie(
+          'token',
+          (await this.signToken(findUser.userId, findUser.email)).access_token,
+          {
+            httpOnly: true,
+            sameSite: 'none',
+            secure: true,
+          },
+        );
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async signup(dto: AuthDto) {
+    const { email, password } = dto;
+
+    try {
+      // Generate hash password
+      const hash = await argon.hash(password);
+
+      // Create new User
+      const newUser = await this.prisma.user.create({
+        data: {
+          email,
+          UserAuths: {
+            create: {
+              hash,
+              email,
+            },
+          },
+        },
+        include: {
+          UserAuths: true,
+        },
+      });
+
+      return newUser;
+    } catch (err) {
+      console.log(err);
+
+      if (err.code === 'P2002') {
+        throw new ForbiddenException('Email already exist');
+      }
+
+      throw err;
+    }
+
+    // return res.json({ newUser });
+  }
+
+  async signToken(
+    userId: number,
+    email: string,
+  ): Promise<{ access_token: string }> {
+    const payload = {
+      userId,
+      email,
+    };
+    const secret = this.config.get('JWT_SECRET');
+
+    const token = await this.jwt.signAsync(payload, {
+      algorithm: 'HS256',
+      expiresIn: '180 days',
+      secret: secret,
+    });
+
+    return {
+      access_token: token,
+    };
+  }
+}

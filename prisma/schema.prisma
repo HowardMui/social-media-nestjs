@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId      Int      @id @default(autoincrement())
+  firstName String?
+  LastName String?
+  email   String   @unique
+  userName String? @unique
+  image String?
+  bio String?
+  description String?
+  isVerified Boolean @default(false)
+  tweets Tweet[]
+  UserAuths UserAuth[]
+  likes   Like[]
+  comments       Comment[]
+  followers User[] @relation(name: "Followers")
+  follows   User[]  @relation(name: "Followers")
+  bookmarks Bookmark[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime @default(now())
+}
+
+model UserAuth{
+  userAuthId Int @id @default(autoincrement())
+  email String @unique
+  hash String
+  provider String?
+  userId Int @unique
+  user User @relation(fields: [userId], references: [userId])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime @default(now())
+}
+
+model Tweet{
+  tweetId      Int      @id @default(autoincrement())
+  image String?
+  content String
+  impression Int @default(0)
+  userId Int
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  likes   Like[]
+  comments       Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime @default(now())
+}
+
+model Like {
+  // likeId Int  @id @default(autoincrement())
+  user   User @relation(fields: [userId], references: [userId])
+  tweet  Tweet @relation(fields: [tweetId], references: [tweetId])
+  userId Int
+  tweetId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, tweetId])
+  @@index([userId])
+  @@index([tweetId])
+}
+
+// One to many
+model Bookmark {
+  bookmarkId Int @id @default(autoincrement())
+
+  title String?
+  content String?
+  link String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId Int
+  user User @relation(fields: [userId], references: [userId])
+}
+
+model Comment {
+  commentId         Int       @id @default(autoincrement())
+  comment    String
+  user       User      @relation(fields: [userId], references: [userId])
+  userId     Int
+  tweet      Tweet     @relation(fields: [tweetId], references: [tweetId])
+  tweetId    Int
+}
