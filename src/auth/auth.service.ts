@@ -110,4 +110,13 @@ export class AuthService {
       access_token: token,
     };
   }
+
+  async logout(res: Response) {
+    res.clearCookie('token', {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
+    });
+    return res.status(200).json('logout successfully');
+  }
 }
