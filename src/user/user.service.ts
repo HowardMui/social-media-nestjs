@@ -10,14 +10,4 @@ export interface AuthenticatedRequest extends Request {
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaSrcService) {}
-
-  async getUserProfile(@Req() req: AuthenticatedRequest) {
-    try {
-      req.user.userId;
-      // this.request.user.userId
-      // await this.prisma.user.findUnique()
-    } catch (err) {
-      console.log(err);
-    }
-  }
 }

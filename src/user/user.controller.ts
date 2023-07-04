@@ -1,14 +1,19 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { AuthGuard } from 'src/auth/guard/auth.guard';
+
+import { ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { Request } from 'express';
 
 @Controller('users')
 export class UserController {
   constructor(private userService: UserService) {}
-  @UseGuards(AuthGuard)
+
+  @ApiTags('user')
+  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard('jwt'))
   @Get('me')
-  getProfile(@Req() req) {
-    // const userId = req.user.userId
-    // return 'get me info';
+  getProfile(@Req() req: Request) {
+    return req.user;
   }
 }
