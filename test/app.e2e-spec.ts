@@ -1,24 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { PrismaSrcService } from '../src/prisma-src/prisma-src.service';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
+  let prisma: PrismaSrcService;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleRef.createNestApplication();
+    // add pipes same as main.ts
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
+    // await app.listen(8001);
+
+    // prisma = app.get(PrismaSrcService);
+    // await prisma.cleanDb();
+    // pactum.request.setBaseUrl(
+    //   'http://localhost:3333',
+    // );
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterAll(() => {
+    app.close();
   });
+
+  it.todo('First todo');
+  it.todo('Second todo');
+  it.todo('Third todo');
+
+  // it('/ (GET)', () => {
+  //   return request(app.getHttpServer())
+  //     .get('/')
+  //     .expect(200)
+  //     .expect('Hello World!');
+  // });
 });
