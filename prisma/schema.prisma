@@ -88,7 +88,7 @@ model Bookmark {
   updatedAt DateTime @updatedAt
 
   userId Int
-  user User @relation(fields: [userId], references: [userId])
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 model Comment {
