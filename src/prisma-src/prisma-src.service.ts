@@ -15,6 +15,8 @@ export class PrismaSrcService extends PrismaClient {
   }
 
   cleanDb() {
+    // Transaction let the delete one by one in array
+    // Delete book must before delete user
     return this.$transaction([
       this.bookmark.deleteMany(),
       this.user.deleteMany(),

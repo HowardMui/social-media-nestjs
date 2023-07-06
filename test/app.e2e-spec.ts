@@ -19,8 +19,8 @@ describe('AppController (e2e)', () => {
     await app.init();
     // await app.listen(8001);
 
-    // prisma = app.get(PrismaSrcService);
-    // await prisma.cleanDb();
+    prisma = app.get(PrismaSrcService);
+    await prisma.cleanDb();
     // pactum.request.setBaseUrl(
     //   'http://localhost:3333',
     // );
@@ -32,7 +32,7 @@ describe('AppController (e2e)', () => {
 
   it.todo('First todo');
   it.todo('Second todo');
-  it.todo('Third todo');
+  // it.todo('Third todo');
   console.log('test dev');
 
   // it('/ (GET)', () => {

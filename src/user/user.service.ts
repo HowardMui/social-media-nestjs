@@ -10,4 +10,6 @@ export interface AuthenticatedRequest extends Request {
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaSrcService) {}
+
+  getUserList() {}
 }
