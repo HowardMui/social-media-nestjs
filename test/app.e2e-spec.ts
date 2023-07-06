@@ -33,6 +33,7 @@ describe('AppController (e2e)', () => {
   it.todo('First todo');
   it.todo('Second todo');
   it.todo('Third todo');
+  console.log(1234);
 
   // it('/ (GET)', () => {
   //   return request(app.getHttpServer())
