@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaSrcService } from '../src/prisma-src/prisma-src.service';
+import { AuthDto } from 'src/auth/dto';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -17,28 +18,37 @@ describe('AppController (e2e)', () => {
     // add pipes same as main.ts
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
-    // await app.listen(8001);
+    await app.listen(3333);
 
     prisma = app.get(PrismaSrcService);
     await prisma.cleanDb();
-    // pactum.request.setBaseUrl(
-    //   'http://localhost:3333',
-    // );
   });
 
   afterAll(() => {
     app.close();
   });
 
-  it.todo('First todo');
-  it.todo('Second todo');
-  // it.todo('Third todo');
-  console.log('test dev');
+  describe('Auth', () => {
+    const dto: AuthDto = {
+      email: 'test1@test.co',
+      password: '123',
+    };
 
-  // it('/ (GET)', () => {
-  //   return request(app.getHttpServer())
-  //     .get('/')
-  //     .expect(200)
-  //     .expect('Hello World!');
-  // });
+    describe('signup', () => {
+      it('should signup', async () => {
+        return await request(app.getHttpServer())
+          .post('/auths/signup')
+          .send(dto)
+          .expect(201);
+      });
+    });
+    describe('signin', () => {
+      it('should signin', async () => {
+        return await request(app.getHttpServer())
+          .post('/auths/signin')
+          .send(dto)
+          .expect(200);
+      });
+    });
+  });
 });
