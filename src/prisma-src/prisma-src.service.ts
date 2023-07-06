@@ -19,6 +19,7 @@ export class PrismaSrcService extends PrismaClient {
     // Delete book must before delete user
     return this.$transaction([
       this.bookmark.deleteMany(),
+      this.userAuth.deleteMany(),
       this.user.deleteMany(),
     ]);
   }
