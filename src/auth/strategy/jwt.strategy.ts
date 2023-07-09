@@ -5,6 +5,14 @@ import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaSrcService } from '../../prisma-src/prisma-src.service';
 
+interface JwtPayload {
+  userId?: number;
+  adminId?: number;
+  email: string;
+  iat: number;
+  exp: number;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(config: ConfigService, private prisma: PrismaSrcService) {
@@ -22,12 +30,22 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: { userId: number; email: string }) {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        userId: payload.userId,
-      },
-    });
-    return user;
+  async validate(payload: JwtPayload) {
+    const { userId, adminId } = payload;
+    if (userId) {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          userId,
+        },
+      });
+      return user;
+    } else if (adminId) {
+      const admin = await this.prisma.admin.findUnique({
+        where: {
+          adminId,
+        },
+      });
+      return admin;
+    }
   }
 }
