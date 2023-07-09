@@ -18,7 +18,7 @@ describe('AppController (e2e)', () => {
     // add pipes same as main.ts
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
-    await app.listen(3333);
+    // await app.listen(3333);
 
     prisma = app.get(PrismaSrcService);
     await prisma.cleanDb();
