@@ -10,6 +10,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum user_type {
+  admin
+  user
+}
+
 model User {
   userId      Int      @id @default(autoincrement())
   firstName String?
@@ -45,6 +50,35 @@ model UserAuth{
   updatedAt DateTime @updatedAt
   deletedAt DateTime @default(now())
 }
+
+model Admin {
+  adminId Int @id @default(autoincrement())
+  email String @unique
+  displayName String @unique
+  loginName String @unique
+  avatar String?
+  notificationToken String?
+  role String?
+  AdminAuth AdminAuth[] 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminAuth {
+  adminAuthId Int @id @default(autoincrement())
+  email String @unique
+  loginName String
+  hash String
+  uid Int?
+  provider String?
+  adminId Int @unique
+  Admin Admin @relation(fields: [adminId], references: [adminId], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime @default(now())
+}
+
 
 model Tweet{
   tweetId      Int      @id @default(autoincrement())
