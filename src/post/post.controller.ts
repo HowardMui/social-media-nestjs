@@ -1,8 +1,19 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PostService } from './post.service';
-import { PostQueryParams } from './dto';
+import { CreatePostDTO, PostQueryParams } from './dto';
+import { Request } from 'express';
+import { Roles } from 'src/auth/role-guard/roles.decorator';
+import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -14,5 +25,13 @@ export class PostController {
   @ApiOperation({ summary: 'List All Post' })
   getAllPosts(@Query() query: PostQueryParams) {
     return this.postService.getAllPostLists(query);
+  }
+
+  @Post('')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  @ApiOperation({ summary: 'Create new post. User only' })
+  createOnePost(@Body() body: CreatePostDTO, @Req() req: Request) {
+    return this.postService.createOnePost(body, req.user);
   }
 }

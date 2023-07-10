@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { PostQueryParams } from './dto';
+import { CreatePostDTO, PostQueryParams } from './dto';
 
 @Injectable()
 export class PostService {
@@ -26,6 +26,16 @@ export class PostService {
       };
 
       return returnObject;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async createOnePost(body: CreatePostDTO, user) {
+    try {
+      return await this.prisma.tweet.create({
+        data: { ...body, userId: user['userId'] },
+      });
     } catch (err) {
       console.log(err);
     }
