@@ -25,7 +25,7 @@ model User {
   bio String?
   description String?
   isVerified Boolean @default(false)
-  tweets Tweet[]
+  posts Post[]
   UserAuths UserAuth[]
   likes   Like[]
   comments       Comment[]
@@ -80,8 +80,8 @@ model AdminAuth {
 }
 
 
-model Tweet{
-  tweetId      Int      @id @default(autoincrement())
+model Post{
+  postId      Int      @id @default(autoincrement())
   image String?
   content String
   impression Int @default(0)
@@ -98,16 +98,16 @@ model Tweet{
 model Like {
   // likeId Int  @id @default(autoincrement())
   user   User @relation(fields: [userId], references: [userId])
-  tweet  Tweet @relation(fields: [tweetId], references: [tweetId])
+  post  Post @relation(fields: [postId], references: [postId])
   userId Int
-  tweetId Int
+  postId Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@id([userId, tweetId])
+  @@id([userId, postId])
   @@index([userId])
-  @@index([tweetId])
+  @@index([postId])
 }
 
 // One to many
@@ -130,6 +130,6 @@ model Comment {
   comment    String
   user       User      @relation(fields: [userId], references: [userId])
   userId     Int
-  tweet      Tweet     @relation(fields: [tweetId], references: [tweetId])
-  tweetId    Int
+  post      Post     @relation(fields: [postId], references: [postId])
+  postId    Int
 }
