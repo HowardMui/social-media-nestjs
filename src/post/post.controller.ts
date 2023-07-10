@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -33,5 +36,21 @@ export class PostController {
   @ApiOperation({ summary: 'Create new post. User only' })
   createOnePost(@Body() body: CreatePostDTO, @Req() req: Request) {
     return this.postService.createOnePost(body, req.user);
+  }
+
+  @Patch('')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  @ApiOperation({ summary: 'Update one post. User only' })
+  updateUserPost() {
+    return null;
+  }
+
+  @Delete('')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Delete one post. Admin only' })
+  deleteUserPost(@Param('postId') postId: number) {
+    return this.postService.deleteOneUserPost(postId);
   }
 }
