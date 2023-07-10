@@ -6,6 +6,7 @@ import { PrismaSrcModule } from './prisma-src/prisma-src.module';
 import { ConfigModule } from '@nestjs/config';
 import { MeModule } from './me/me.module';
 import { AdminModule } from './admin/admin.module';
+import { PostModule } from './post/post.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AdminModule } from './admin/admin.module';
     PrismaSrcModule,
     MeModule,
     AdminModule,
+    PostModule,
   ],
   controllers: [AppController],
   providers: [AppService],
