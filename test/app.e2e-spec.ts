@@ -3,7 +3,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaSrcService } from '../src/prisma-src/prisma-src.service';
-import { AuthDto } from 'src/auth/dto';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -29,7 +28,7 @@ describe('AppController (e2e)', () => {
   });
 
   describe('Auth', () => {
-    const dto: AuthDto = {
+    const dto: any = {
       email: 'test1@test.co',
       password: '123',
     };
