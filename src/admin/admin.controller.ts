@@ -22,7 +22,7 @@ export class AdminController {
 
   // Auth ------------------------------------------------------------------------------------
 
-  @Post('signin')
+  @Post('signIn')
   @ApiOperation({ summary: 'Admin Password Sign In' })
   adminSignin(
     @Body() dto: AdminSigninDto,
@@ -31,7 +31,7 @@ export class AdminController {
     return this.adminService.adminSignin(dto, res);
   }
 
-  @Post('signup')
+  @Post('signUp')
   @ApiOperation({ summary: 'Admin Password Sign up' })
   signup(@Body() dto: AdminAuthDto): any {
     return this.adminService.adminSignup(dto);

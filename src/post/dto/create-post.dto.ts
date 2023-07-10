@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, MaxLength } from 'class-validator';
 
 export class CreatePostDTO {
   @ApiPropertyOptional()
@@ -7,5 +7,6 @@ export class CreatePostDTO {
 
   @ApiProperty()
   @IsNotEmpty()
+  @MaxLength(200)
   content: string;
 }

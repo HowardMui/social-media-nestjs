@@ -1,17 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, Max } from 'class-validator';
+import { IsOptional, IsString, Max, MaxLength } from 'class-validator';
 
 export class UpdateUserProfileDTO {
   @ApiProperty()
   @IsString()
   @IsOptional()
-  // @Max(20, { message: 'Maximum 20 chars' })
+  @MaxLength(20)
   firstName?: string;
 
   @ApiProperty()
   @IsOptional()
   @IsString()
-  // @Max(20, { message: 'Maximum 20 chars' })
+  @MaxLength(20)
   LastName?: string;
 
   @ApiProperty()
@@ -27,6 +27,6 @@ export class UpdateUserProfileDTO {
   @ApiProperty()
   @IsOptional()
   @IsString()
-  // @Max(200, { message: 'Maximum 200 chars' })
+  @MaxLength(200)
   description?: string;
 }

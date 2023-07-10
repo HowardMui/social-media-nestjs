@@ -1,13 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 export class AdminAuthDto {
   @ApiProperty()
   @IsNotEmpty()
+  @MaxLength(20)
   displayName: string;
 
   @ApiProperty()
   @IsNotEmpty()
+  @MaxLength(20)
   loginName: string;
 
   @ApiProperty()
@@ -18,6 +20,7 @@ export class AdminAuthDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(50)
   password: string;
 }
 
