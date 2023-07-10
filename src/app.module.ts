@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MeModule } from './me/me.module';
 import { AdminModule } from './admin/admin.module';
 import { PostModule } from './post/post.module';
+import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PostModule } from './post/post.module';
     MeModule,
     AdminModule,
     PostModule,
+    CommentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
