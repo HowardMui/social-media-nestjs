@@ -132,4 +132,8 @@ model Comment {
   userId     Int
   post      Post     @relation(fields: [postId], references: [postId])
   postId    Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime @default(now())
 }
