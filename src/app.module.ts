@@ -8,6 +8,7 @@ import { MeModule } from './me/me.module';
 import { AdminModule } from './admin/admin.module';
 import { PostModule } from './post/post.module';
 import { CommentModule } from './comment/comment.module';
+import { BookmarkModule } from './bookmark/bookmark.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CommentModule } from './comment/comment.module';
     AdminModule,
     PostModule,
     CommentModule,
+    BookmarkModule,
   ],
   controllers: [AppController],
   providers: [AppService],
