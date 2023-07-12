@@ -1,12 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { CreatePostDTO, PostQueryParams } from './dto';
+import { CreatePostDTO, GetPostQueryParams } from './dto';
 
 @Injectable()
 export class PostService {
   constructor(private prisma: PrismaSrcService) {}
 
-  async getAllPostLists(query: PostQueryParams) {
+  async getAllPostLists(query: GetPostQueryParams) {
     const { limit, offset, asc, desc, userId } = query;
 
     try {
