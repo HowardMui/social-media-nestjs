@@ -1,20 +1,33 @@
-import { Inject, Injectable, Param, Req, Scope } from '@nestjs/common';
-import { User } from '@prisma/client';
-import { Request } from 'express';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from '../prisma-src/prisma-src.service';
-import { UpdateUserDTO } from './dto';
-
-export interface AuthenticatedRequest extends Request {
-  user: User;
-}
+import { GetUserQueryParams, UpdateUserDTO } from './dto';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaSrcService) {}
 
-  async getUserList() {
+  async getUserList(query: GetUserQueryParams) {
+    const { limit, offset, asc, desc } = query;
+
     try {
-      return await this.prisma.user.findMany({});
+      const userList = await this.prisma.user.findMany({
+        skip: offset ?? 0,
+        take: limit ?? 20,
+        include: {
+          posts: true,
+          bookmarks: true,
+          likes: true,
+        },
+      });
+
+      const returnObject = {
+        count: userList.length,
+        rows: userList,
+        limit,
+        offset,
+      };
+
+      return returnObject;
     } catch (err) {
       console.log(err);
     }
@@ -31,9 +44,14 @@ export class UserService {
     }
   }
 
-  async deleteAllUser() {
+  async deleteOneUser(userId: number) {
     try {
-      return await this.prisma.user.deleteMany();
+      await this.prisma.user.delete({
+        where: {
+          userId,
+        },
+      });
+      return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
     }
