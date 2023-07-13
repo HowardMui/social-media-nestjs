@@ -46,7 +46,7 @@ export class AdminController {
   // Admin Action ------------------------------------------------------------------------------------
 
   @Get('')
-  @ApiOperation({ summary: 'Get Current Admin Profile, Admin Only' })
+  @ApiOperation({ summary: 'Get Current Admin Profile. Admin Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   getAdminProfile(@Req() req: Request) {

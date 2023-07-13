@@ -33,7 +33,7 @@ export class PostController {
   @Post('')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  @ApiOperation({ summary: 'Create new post. User only' })
+  @ApiOperation({ summary: 'Create new post. App User only' })
   createOnePost(@Body() body: CreatePostDTO, @Req() req: Request) {
     return this.postService.createOnePost(body, req.user);
   }
@@ -41,7 +41,7 @@ export class PostController {
   @Patch('')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  @ApiOperation({ summary: 'Update one post. User only' })
+  @ApiOperation({ summary: 'Update one post. App User only' })
   updateUserPost() {
     return null;
   }
