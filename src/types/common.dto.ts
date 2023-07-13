@@ -1,17 +1,19 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsOptional } from 'class-validator';
+import { IsNumber, IsOptional } from 'class-validator';
 
 export class QueryParams {
   @Transform(({ value }) => parseInt(value))
-  @ApiProperty()
-  @IsNotEmpty()
-  limit: number;
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  limit?: number;
 
   @Transform(({ value }) => parseInt(value))
-  @ApiProperty()
-  @IsNotEmpty()
-  offset: number;
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  offset?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -20,11 +22,6 @@ export class QueryParams {
   @ApiPropertyOptional()
   @IsOptional()
   desc?: string;
-
-  @Transform(({ value }) => parseInt(value))
-  @ApiPropertyOptional()
-  @IsOptional()
-  userId?: number;
 }
 
 export interface GetReqReturnType<T> {
