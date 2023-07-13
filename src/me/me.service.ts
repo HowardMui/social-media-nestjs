@@ -14,6 +14,8 @@ export class MeService {
     private config: ConfigService,
   ) {}
 
+  // Auth ------------------------------------------------------------------------------------
+
   async userSignIn(dto: UserAuthDto, res: Response) {
     const { email, password } = dto;
 
@@ -118,6 +120,8 @@ export class MeService {
     };
   }
 
+  // User Action ------------------------------------------------------------------------------------
+
   async updateMe(req: Request, dto: UpdateUserProfileDTO) {
     try {
       const testUpdate = await this.prisma.user.update({
@@ -128,6 +132,26 @@ export class MeService {
       });
       console.log(testUpdate);
       return testUpdate;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  // bookmark Action ------------------------------------------------------------------------------------
+
+  async getAllUserBookmarkList(user) {
+    try {
+      const findBookmarkPost = await this.prisma.bookmark.findMany({
+        where: {
+          userId: user.userId,
+        },
+        select: {
+          post: true,
+        },
+        // include: {
+        //   post: true,
+        // },
+      });
     } catch (err) {
       console.log(err);
     }

@@ -64,4 +64,14 @@ export class MeController {
   updateMe(@Req() req: Request, @Body() dto: UpdateUserProfileDTO) {
     return this.userProfileService.updateMe(req, dto);
   }
+
+  // bookmark Action ------------------------------------------------------------------------------------
+
+  @Get('posts/bookmark')
+  @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  getMeBookmarkList(@Req() req: Request) {
+    return this.userProfileService.getAllUserBookmarkList(req.user);
+  }
 }

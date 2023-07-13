@@ -23,8 +23,8 @@ export class UserService {
       const returnObject = {
         count: userList.length,
         rows: userList,
-        limit,
-        offset,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
       };
 
       return returnObject;
