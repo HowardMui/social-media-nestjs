@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -43,5 +44,13 @@ export class CommentController {
     @Body() body: CreateCommentDTO,
   ) {
     return this.commentService.createOneComment(req.user, body);
+  }
+
+  @Delete('comments/:commentId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Delete one comment. Admin Only' })
+  deleteOnePostComment(@Param('commentId') commentId: number) {
+    return this.commentService.deleteOneComment(commentId);
   }
 }
