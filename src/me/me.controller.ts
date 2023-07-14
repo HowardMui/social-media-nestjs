@@ -4,6 +4,7 @@ import {
   Get,
   Patch,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -17,7 +18,11 @@ import {
 import { MeService } from './me.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
-import { UpdateUserProfileDTO, UserAuthDto } from './dto';
+import {
+  GetUserBookmarkedPost,
+  UpdateUserProfileDTO,
+  UserAuthDto,
+} from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 
@@ -71,7 +76,10 @@ export class MeController {
   @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getMeBookmarkList(@Req() req: Request) {
-    return this.userProfileService.getAllUserBookmarkList(req.user);
+  getMeBookmarkList(
+    @Query() query: GetUserBookmarkedPost,
+    @Req() req: Request,
+  ) {
+    return this.userProfileService.getAllUserBookmarkList(query, req.user);
   }
 }

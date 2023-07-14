@@ -1,6 +1,10 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { UpdateUserProfileDTO, UserAuthDto } from './dto';
+import {
+  GetUserBookmarkedPost,
+  UpdateUserProfileDTO,
+  UserAuthDto,
+} from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
 import { ConfigService } from '@nestjs/config';
@@ -139,19 +143,31 @@ export class MeService {
 
   // bookmark Action ------------------------------------------------------------------------------------
 
-  async getAllUserBookmarkList(user) {
+  async getAllUserBookmarkList(query: GetUserBookmarkedPost, user) {
+    const { limit, offset, asc, desc } = query;
+
     try {
-      const findBookmarkPost = await this.prisma.bookmark.findMany({
+      const findBookmarkPost = await this.prisma.user.findMany({
         where: {
           userId: user.userId,
         },
         select: {
-          post: true,
+          bookmarkedPosts: {
+            skip: offset ?? 0,
+            take: limit ?? 20,
+          },
         },
-        // include: {
-        //   post: true,
-        // },
       });
+
+      const tempArr = findBookmarkPost.flatMap((item) => item.bookmarkedPosts);
+
+      const returnObject = {
+        count: tempArr.length,
+        rows: tempArr,
+        limit,
+        offset,
+      };
+      return returnObject;
     } catch (err) {
       console.log(err);
     }
