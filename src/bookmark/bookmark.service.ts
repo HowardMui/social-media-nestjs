@@ -8,14 +8,40 @@ export class BookmarkService {
 
   async bookmarkOnePost(postId: number, user) {
     try {
-      await this.prisma.userBookmark.create({
+      const createData = await this.prisma.userBookmark.create({
         data: {
           postId,
           userId: user.userId,
         },
+        select: {
+          post: true,
+        },
+        // include: {
+        //   post: true,
+        // },
       });
 
-      return { status: HttpStatus.CREATED };
+      const getBookmarkTable = await this.prisma.userBookmark.findMany({});
+      console.log(getBookmarkTable);
+
+      return createData.post;
+      // return { status: HttpStatus.CREATED };
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async deleteOneBookmark(postId: number, user) {
+    try {
+      await this.prisma.userBookmark.delete({
+        where: {
+          postId_userId: {
+            postId,
+            userId: user.userId,
+          },
+        },
+      });
+      return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
     }

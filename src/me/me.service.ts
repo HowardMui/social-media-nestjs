@@ -157,7 +157,12 @@ export class MeService {
             take: limit ?? 20,
           },
         },
+        // include: {
+        //   bookmarkedPosts: true,
+        // },
       });
+
+      console.log(...findBookmarkPost);
 
       const tempArr = findBookmarkPost.flatMap((item) => item.bookmarkedPosts);
 

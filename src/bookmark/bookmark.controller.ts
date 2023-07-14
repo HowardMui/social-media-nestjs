@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -15,7 +16,7 @@ import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Request } from 'express';
 
 @ApiTags('Posts')
-@Controller('bookmark')
+@Controller('posts')
 export class BookmarkController {
   constructor(private bookmarkService: BookmarkService) {}
 
@@ -28,5 +29,16 @@ export class BookmarkController {
     @Req() req: Request,
   ) {
     return this.bookmarkService.bookmarkOnePost(postId, req.user);
+  }
+
+  @Delete(':postId/bookmark')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  @ApiOperation({ summary: 'UnBookmark post by postId, App User Only' })
+  unBookmarkOnePost(
+    @Param('postId', new ParseIntPipe()) postId: number,
+    @Req() req: Request,
+  ) {
+    return this.bookmarkService.deleteOneBookmark(postId, req.user);
   }
 }
