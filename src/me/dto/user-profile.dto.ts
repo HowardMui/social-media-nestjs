@@ -1,5 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, Max, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import { QueryParams } from 'src/types';
+
+export class GetUserBookmarkedPost extends QueryParams {}
+
+export class UserProfileAuthDto {
+  @ApiProperty()
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}
 
 export class UpdateUserProfileDTO {
   @ApiProperty()

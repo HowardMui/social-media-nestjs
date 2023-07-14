@@ -21,7 +21,7 @@ import { Request, Response } from 'express';
 import {
   GetUserBookmarkedPost,
   UpdateUserProfileDTO,
-  UserAuthDto,
+  UserProfileAuthDto,
 } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
@@ -33,17 +33,20 @@ export class MeController {
 
   // Auth ------------------------------------------------------------------------------------
 
-  @ApiBody({ type: UserAuthDto })
+  @ApiBody({ type: UserProfileAuthDto })
   @ApiForbiddenResponse()
   @ApiOperation({ summary: 'User Sign In' })
   @Post('signIn')
-  login(@Body() dto: UserAuthDto, @Res({ passthrough: true }) res: Response) {
+  login(
+    @Body() dto: UserProfileAuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     return this.userProfileService.userSignIn(dto, res);
   }
 
   @Post('signUp')
   @ApiOperation({ summary: 'User Sign Up' })
-  signup(@Body() dto: UserAuthDto): any {
+  signup(@Body() dto: UserProfileAuthDto): any {
     return this.userProfileService.userSignUp(dto);
   }
 

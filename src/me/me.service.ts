@@ -3,7 +3,7 @@ import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   GetUserBookmarkedPost,
   UpdateUserProfileDTO,
-  UserAuthDto,
+  UserProfileAuthDto,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
@@ -20,7 +20,7 @@ export class MeService {
 
   // Auth ------------------------------------------------------------------------------------
 
-  async userSignIn(dto: UserAuthDto, res: Response) {
+  async userSignIn(dto: UserProfileAuthDto, res: Response) {
     const { email, password } = dto;
 
     try {
@@ -59,7 +59,7 @@ export class MeService {
     }
   }
 
-  async userSignUp(dto: UserAuthDto) {
+  async userSignUp(dto: UserProfileAuthDto) {
     const { email, password } = dto;
 
     try {

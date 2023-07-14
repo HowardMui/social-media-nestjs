@@ -13,11 +13,11 @@ export class UserService {
       const userList = await this.prisma.user.findMany({
         skip: offset ?? 0,
         take: limit ?? 20,
-        include: {
-          posts: true,
-          bookmarks: true,
-          likes: true,
-        },
+        // include: {
+        //   posts: true,
+        //   bookmarks: true,
+        //   likes: true,
+        // },
       });
 
       const returnObject = {
