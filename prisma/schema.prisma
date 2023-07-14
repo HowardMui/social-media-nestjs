@@ -31,7 +31,7 @@ model User {
   comments       Comment[]
   followers User[] @relation(name: "Followers")
   follows   User[]  @relation(name: "Followers")
-  bookmarks Bookmark[]
+  bookmarkedPosts UserBookmark[] 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -89,7 +89,7 @@ model Post{
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
   likes   Like[]
   comments       Comment[]
-  bookmarkedUser Bookmark[]
+  bookmarkedPosts UserBookmark[] 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -111,24 +111,15 @@ model Like {
   @@index([postId])
 }
 
-// One to many
-model Bookmark {
-  bookmarkId Int @id @default(autoincrement())
-
-  title String?
-  content String?
-  link String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-
+// Many to many
+model UserBookmark{
+  postId Int
+  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
   userId Int
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  postId    Int
-  post      Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
 
-
+  @@id([postId, userId])
+  @@map("user_bookmarked_posts")
 }
 
 model Comment {
