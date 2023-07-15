@@ -64,7 +64,7 @@ export class MeController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
   getProfile(@Req() req: Request) {
-    return req.user;
+    return this.userProfileService.getCurrentUserProfile(req.user['userId']);
   }
 
   @Patch('')
@@ -72,6 +72,22 @@ export class MeController {
   @ApiOperation({ summary: 'Update Current User Profile, App User Only' })
   updateMe(@Req() req: Request, @Body() dto: UpdateUserProfileDTO) {
     return this.userProfileService.updateMe(req, dto);
+  }
+
+  @Get('followers')
+  @ApiOperation({ summary: 'Get Current User followers. App User Only' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  getMeFollowers() {
+    return;
+  }
+
+  @Get('follows')
+  @ApiOperation({ summary: 'Get Current User follows. App User Only' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  getMeFollows() {
+    return;
   }
 
   // bookmark Action ------------------------------------------------------------------------------------
