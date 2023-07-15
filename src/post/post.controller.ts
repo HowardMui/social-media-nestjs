@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -22,6 +23,8 @@ import { CreatePostDTO, GetPostQueryParams } from './dto';
 @Controller('posts')
 export class PostController {
   constructor(private postService: PostService) {}
+
+  // Basic CRUD ------------------------------------------------------------------------------------
 
   @Get('')
   @UseGuards(AuthGuard('jwt'))
@@ -52,5 +55,31 @@ export class PostController {
   @ApiOperation({ summary: 'Delete one post. Admin only' })
   deleteUserPost(@Param('postId') postId: number) {
     return this.postService.deleteOneUserPost(postId);
+  }
+
+  // Like a post ------------------------------------------------------------------------------------
+
+  // @Get(':postId/like')
+
+  @Post(':postId/like')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  @ApiOperation({ summary: 'Like a post. App User only' })
+  likeAPost(
+    @Param('postId', new ParseIntPipe()) postId: number,
+    @Req() req: Request,
+  ) {
+    return this.postService.likeAPostByUser(postId, req.user['userId']);
+  }
+
+  @Delete(':postId/like')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  @ApiOperation({ summary: 'UnLike a post. App User only' })
+  unLikeAPost(
+    @Param('postId', new ParseIntPipe()) postId: number,
+    @Req() req: Request,
+  ) {
+    return this.postService.unLikeAPost(postId, req.user['userId']);
   }
 }

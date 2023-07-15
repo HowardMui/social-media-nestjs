@@ -8,8 +8,6 @@ import {
 } from 'class-validator';
 import { QueryParams } from 'src/types';
 
-export class GetUserBookmarkedPost extends QueryParams {}
-
 export class UserProfileAuthDto {
   @ApiProperty()
   @IsEmail()
@@ -51,3 +49,7 @@ export class UpdateUserProfileDTO {
   @MaxLength(200)
   description?: string;
 }
+
+export class GetUserBookmarkedPost extends QueryParams {}
+
+export class GetOneUserLikedPost extends QueryParams {}

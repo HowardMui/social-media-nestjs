@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
+  GetOneUserLikedPost,
   GetUserBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
@@ -143,35 +144,74 @@ export class MeService {
 
   // bookmark Action ------------------------------------------------------------------------------------
 
-  async getAllUserBookmarkList(query: GetUserBookmarkedPost, user) {
+  async getAllUserBookmarkList(query: GetUserBookmarkedPost, userId: number) {
     const { limit, offset, asc, desc } = query;
 
     try {
       const findBookmarkPost = await this.prisma.user.findMany({
         where: {
-          userId: user.userId,
+          userId,
         },
         select: {
           bookmarkedPosts: {
             skip: offset ?? 0,
             take: limit ?? 20,
+            select: {
+              post: true,
+            },
           },
         },
-        // include: {
-        //   bookmarkedPosts: true,
-        // },
       });
 
-      console.log(...findBookmarkPost);
-
-      const tempArr = findBookmarkPost.flatMap((item) => item.bookmarkedPosts);
+      const rows = findBookmarkPost[0].bookmarkedPosts.map((bookmark) => {
+        return {
+          ...bookmark.post,
+        };
+      });
 
       const returnObject = {
-        count: tempArr.length,
-        rows: tempArr,
-        limit,
-        offset,
+        count: rows.length,
+        rows,
+        limit: limit ?? 0,
+        offset: offset ?? 20,
       };
+      return returnObject;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  // like Action ------------------------------------------------------------------------------------
+
+  async getMeLikedPostList(query: GetOneUserLikedPost, userId: number) {
+    const { limit, offset, asc, desc } = query;
+
+    try {
+      const findLikedPost = await this.prisma.userLikedPost.findMany({
+        where: {
+          userId,
+        },
+        skip: offset ?? 0,
+        take: limit ?? 20,
+        select: {
+          post: true,
+        },
+      });
+
+      const rows = findLikedPost.map((liked) => {
+        return {
+          ...liked.post,
+        };
+      });
+
+      const returnObject = {
+        count: rows.length,
+        rows,
+        limit: limit ?? 0,
+        offset: offset ?? 20,
+      };
+
+      // console.log(data);
       return returnObject;
     } catch (err) {
       console.log(err);

@@ -19,6 +19,7 @@ import { MeService } from './me.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import {
+  GetOneUserLikedPost,
   GetUserBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
@@ -83,6 +84,21 @@ export class MeController {
     @Query() query: GetUserBookmarkedPost,
     @Req() req: Request,
   ) {
-    return this.userProfileService.getAllUserBookmarkList(query, req.user);
+    return this.userProfileService.getAllUserBookmarkList(
+      query,
+      req.user['userId'],
+    );
+  }
+
+  // like Action ------------------------------------------------------------------------------------
+  @Get('posts/like')
+  @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  getMeLikedPost(@Query() query: GetOneUserLikedPost, @Req() req: Request) {
+    return this.userProfileService.getMeLikedPostList(
+      query,
+      req.user['userId'],
+    );
   }
 }
