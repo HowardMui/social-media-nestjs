@@ -127,6 +127,18 @@ export class MeService {
 
   // User Action ------------------------------------------------------------------------------------
 
+  async getCurrentUserProfile(currentUserId: number) {
+    try {
+      return await this.prisma.user.findUnique({
+        where: {
+          userId: currentUserId,
+        },
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
   async updateMe(req: Request, dto: UpdateUserProfileDTO) {
     try {
       const testUpdate = await this.prisma.user.update({

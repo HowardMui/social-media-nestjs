@@ -64,7 +64,8 @@ export class MeController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
   getProfile(@Req() req: Request) {
-    return this.userProfileService.getCurrentUserProfile(req.user['userId']);
+    return req.user;
+    // return this.userProfileService.getCurrentUserProfile(req.user['userId']);
   }
 
   @Patch('')
