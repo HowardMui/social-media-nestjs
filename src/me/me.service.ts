@@ -211,7 +211,6 @@ export class MeService {
         offset: offset ?? 20,
       };
 
-      // console.log(data);
       return returnObject;
     } catch (err) {
       console.log(err);
