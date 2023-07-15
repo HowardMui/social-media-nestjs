@@ -1,4 +1,9 @@
-import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { CreatePostDTO, GetPostQueryParams } from './dto';
 
@@ -31,6 +36,22 @@ export class PostService {
       };
 
       return returnObject;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async getOnePost(postId: number) {
+    try {
+      const findPost = await this.prisma.post.findUnique({
+        where: {
+          postId,
+        },
+      });
+      if (!findPost) {
+        return new NotFoundException();
+      }
+      return findPost;
     } catch (err) {
       console.log(err);
     }
@@ -86,7 +107,11 @@ export class PostService {
       return post;
     } catch (err) {
       console.log(err);
-      throw new BadRequestException('Already liked by user');
+      if (err.code === 'P2025') {
+        throw new NotFoundException('Post do not exist');
+      } else {
+        throw new BadRequestException('Already liked by user');
+      }
     }
   }
 

@@ -33,6 +33,13 @@ export class PostController {
     return this.postService.getAllPostLists(query);
   }
 
+  @Get(':postId')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get one Post.' })
+  getOnePost(@Param('postId', new ParseIntPipe()) postId: number) {
+    return this.postService.getOnePost(postId);
+  }
+
   @Post('')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
