@@ -100,7 +100,7 @@ model Post{
 // Many to many
 model UserLikedPost {
   user   User @relation(fields: [userId], references: [userId])
-  post  Post @relation(fields: [postId], references: [postId])
+  post  Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
   userId Int
   postId Int
 
