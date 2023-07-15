@@ -1,10 +1,12 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaSrcService } from '../prisma-src/prisma-src.service';
 import { GetUserQueryParams, UpdateUserDTO } from './dto';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaSrcService) {}
+
+  // User CRUD ------------------------------------------------------------------------------------------------
 
   async getUserList(query: GetUserQueryParams) {
     const { limit, offset, asc, desc } = query;
@@ -33,6 +35,26 @@ export class UserService {
     }
   }
 
+  async getOneUser(userId: number) {
+    try {
+      const findOneUser = await this.prisma.user.findUnique({
+        where: {
+          userId,
+        },
+        include: {
+          followers: true,
+          follows: true,
+        },
+      });
+      if (!findOneUser) {
+        return new NotFoundException();
+      }
+      return findOneUser;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
   async updateOneUser(userId: number, dto: UpdateUserDTO) {
     try {
       return await this.prisma.user.update({
@@ -52,6 +74,48 @@ export class UserService {
         },
       });
       return { status: HttpStatus.OK };
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  // Follow user action ---------------------------------------------------------------------------------------------------
+
+  async followOneUser(wannaFollowId: number, currentUserId: number) {
+    try {
+      const wannaToFollowUser = await this.prisma.user.update({
+        where: {
+          userId: wannaFollowId,
+        },
+        data: {
+          followers: {
+            connect: {
+              userId: currentUserId,
+            },
+          },
+        },
+      });
+      return wannaToFollowUser;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async unFollowOneUser(wannaUnFollowId: number, currentUserId: number) {
+    try {
+      const wannaToUnFollowUser = await this.prisma.user.update({
+        where: {
+          userId: wannaUnFollowId,
+        },
+        data: {
+          followers: {
+            disconnect: {
+              userId: currentUserId,
+            },
+          },
+        },
+      });
+      return wannaToUnFollowUser;
     } catch (err) {
       console.log(err);
     }
