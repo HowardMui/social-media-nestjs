@@ -27,7 +27,7 @@ model User {
   isVerified Boolean @default(false)
   posts Post[]
   UserAuths UserAuth[]
-  likes   Like[]
+  likedPosts   UserLikedPost[]
   comments       Comment[]
   followers User[] @relation(name: "Followers")
   follows   User[]  @relation(name: "Followers")
@@ -87,17 +87,18 @@ model Post{
   impression Int @default(0)
   userId Int
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  likes   Like[]
+  numOfUserLikes Int @default(0)
+  likedByUser   UserLikedPost[]
   comments       Comment[]
-  bookmarkedPosts UserBookmark[] 
+  bookmarkedByUser UserBookmark[] 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime @default(now())
 }
 
-model Like {
-  // likeId Int  @id @default(autoincrement())
+// Many to many
+model UserLikedPost {
   user   User @relation(fields: [userId], references: [userId])
   post  Post @relation(fields: [postId], references: [postId])
   userId Int
@@ -109,6 +110,7 @@ model Like {
   @@id([userId, postId])
   @@index([userId])
   @@index([postId])
+  @@map("user_liked_posts")
 }
 
 // Many to many
