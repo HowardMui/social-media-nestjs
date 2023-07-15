@@ -18,13 +18,10 @@ export class PostService {
         where: {
           userId: userId ? userId : undefined,
         },
+        // include: {
+        //   likedByUser: true,
+        // },
       });
-
-      // await this.prisma.post.aggregate({
-      //   _count: {
-      //     lik
-      //   }
-      // })
 
       const returnObject = {
         count: findPosts.length,
@@ -63,14 +60,30 @@ export class PostService {
   // Like a post ------------------------------------------------------------------------------------
   async likeAPostByUser(postId: number, userId: number) {
     try {
-      await this.prisma.userLikedPost.create({
-        data: {
+      // await this.prisma.userLikedPost.create({
+      //   data: {
+      //     postId,
+      //     userId,
+      //   },
+      // });
+      const post = await this.prisma.post.update({
+        where: {
           postId,
-          userId,
+        },
+        data: {
+          numOfUserLikes: {
+            increment: 1,
+          },
+          likedByUser: {
+            create: {
+              userId,
+            },
+          },
         },
       });
-      // console.log(123);
-      return { status: HttpStatus.CREATED };
+
+      // return { status: HttpStatus.CREATED };
+      return post;
     } catch (err) {
       console.log(err);
       throw new BadRequestException('Already liked by user');
@@ -79,15 +92,34 @@ export class PostService {
 
   async unLikeAPost(postId: number, userId: number) {
     try {
-      await this.prisma.userLikedPost.delete({
+      // await this.prisma.userLikedPost.delete({
+      //   where: {
+      //     userId_postId: {
+      //       postId,
+      //       userId,
+      //     },
+      //   },
+      // });
+      const post = await this.prisma.post.update({
         where: {
-          userId_postId: {
-            postId,
-            userId,
+          postId,
+        },
+        data: {
+          numOfUserLikes: {
+            decrement: 1,
+          },
+          likedByUser: {
+            delete: {
+              userId_postId: {
+                userId,
+                postId,
+              },
+            },
           },
         },
       });
-      return { status: HttpStatus.OK };
+      return post;
+      // return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
     }
