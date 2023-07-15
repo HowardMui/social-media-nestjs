@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 
@@ -16,18 +16,13 @@ export class BookmarkService {
         select: {
           post: true,
         },
-        // include: {
-        //   post: true,
-        // },
       });
 
-      const getBookmarkTable = await this.prisma.userBookmark.findMany({});
-      console.log(getBookmarkTable);
-
-      return createData.post;
-      // return { status: HttpStatus.CREATED };
+      // return createData.post;
+      return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
+      throw new BadRequestException('Already bookmarked by user');
     }
   }
 
