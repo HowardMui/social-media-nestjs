@@ -15,6 +15,11 @@ export class UserProfileAuthDto {
   email: string;
 
   @ApiProperty()
+  @IsNotEmpty()
+  @MaxLength(20)
+  userName: string;
+
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   password: string;
@@ -53,3 +58,5 @@ export class UpdateUserProfileDTO {
 export class GetUserBookmarkedPost extends QueryParams {}
 
 export class GetOneUserLikedPost extends QueryParams {}
+
+export class GetOneUserPost extends QueryParams {}
