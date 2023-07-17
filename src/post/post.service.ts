@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { CreatePostDTO, GetPostQueryParams } from './dto';
+import { returnAscOrDescInQueryParams } from 'src/helper';
 
 @Injectable()
 export class PostService {
@@ -18,14 +19,12 @@ export class PostService {
 
     try {
       const findPosts = await this.prisma.post.findMany({
+        orderBy: returnAscOrDescInQueryParams(asc, desc) || { postId: 'desc' },
         skip: offset,
         take: limit,
         where: {
           userId: userId ? userId : undefined,
         },
-        // include: {
-        //   likedByUser: true,
-        // },
       });
 
       const returnObject = {
@@ -38,6 +37,13 @@ export class PostService {
       return returnObject;
     } catch (err) {
       console.log(err);
+      if (err.message.includes('Unknown arg')) {
+        throw new BadRequestException(
+          `Invalid orderBy field: ${
+            err.message.split('Unknown arg')[1].split(' in ')[0]
+          }}`,
+        );
+      }
     }
   }
 
@@ -81,13 +87,20 @@ export class PostService {
   // Like a post ------------------------------------------------------------------------------------
   async likeAPostByUser(postId: number, userId: number) {
     try {
-      // await this.prisma.userLikedPost.create({
-      //   data: {
-      //     postId,
-      //     userId,
-      //   },
-      // });
-      const post = await this.prisma.post.update({
+      const post = await this.prisma.post.findUnique({
+        where: {
+          postId,
+        },
+        include: {
+          likedByUser: true,
+        },
+      });
+
+      if (post.likedByUser.find((user) => user.userId === userId)) {
+        return new BadRequestException('Already liked by user');
+      }
+
+      await this.prisma.post.update({
         where: {
           postId,
         },
@@ -96,18 +109,17 @@ export class PostService {
             increment: 1,
           },
           likedByUser: {
-            create: {
+            connect: {
               userId,
             },
           },
         },
       });
 
-      // return { status: HttpStatus.CREATED };
-      return post;
+      return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
-      if (err.code === 'P2025') {
+      if (err.code === 'P2025' || err.code === 'P2016') {
         throw new NotFoundException('Post do not exist');
       } else {
         throw new BadRequestException('Already liked by user');
@@ -117,34 +129,112 @@ export class PostService {
 
   async unLikeAPost(postId: number, userId: number) {
     try {
-      // await this.prisma.userLikedPost.delete({
-      //   where: {
-      //     userId_postId: {
-      //       postId,
-      //       userId,
-      //     },
-      //   },
-      // });
-      const post = await this.prisma.post.update({
+      const post = await this.prisma.post.findUnique({
+        where: {
+          postId,
+        },
+        include: {
+          likedByUser: true,
+        },
+      });
+
+      if (!post.likedByUser.find((user) => user.userId === userId)) {
+        return new BadRequestException(
+          'Cannot unliked.  User do not liked yet',
+        );
+      }
+
+      await this.prisma.post.update({
         where: {
           postId,
         },
         data: {
+          likedByUser: {
+            disconnect: {
+              userId,
+            },
+          },
           numOfUserLikes: {
             decrement: 1,
           },
-          likedByUser: {
-            delete: {
-              userId_postId: {
-                userId,
-                postId,
-              },
+        },
+      });
+      // return post;
+      return { status: HttpStatus.OK };
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  // Share a post to current User Blog ------------------------------------------------------------------------------------
+  async rePostAPostToCurrentUserBlog(postId: number, userId: number) {
+    try {
+      const post = await this.prisma.post.findUnique({
+        where: {
+          postId,
+        },
+        include: {
+          listUserRePost: true,
+        },
+      });
+
+      if (post.listUserRePost.find((user) => user.userId === userId)) {
+        return new BadRequestException('Already rePost by user');
+      }
+
+      const findPost = await this.prisma.post.update({
+        where: {
+          postId,
+        },
+        data: {
+          listUserRePost: {
+            connect: {
+              userId,
             },
+          },
+          numOfUserRePost: {
+            increment: 1,
           },
         },
       });
-      return post;
-      // return { status: HttpStatus.OK };
+      return findPost;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async cancelRePostAPost(postId: number, userId: number) {
+    try {
+      const post = await this.prisma.post.findUnique({
+        where: {
+          postId,
+        },
+        include: {
+          listUserRePost: true,
+        },
+      });
+
+      if (!post.listUserRePost.find((user) => user.userId === userId)) {
+        return new BadRequestException('Did not rePosted by user');
+      }
+
+      const findPost = await this.prisma.post.update({
+        where: {
+          postId,
+        },
+        data: {
+          listUserRePost: {
+            disconnect: {
+              userId,
+            },
+          },
+          numOfUserRePost: {
+            decrement: 1,
+          },
+        },
+      });
+
+      return findPost;
     } catch (err) {
       console.log(err);
     }
