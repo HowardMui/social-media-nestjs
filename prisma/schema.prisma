@@ -20,14 +20,15 @@ model User {
   firstName String?
   LastName String?
   email   String   @unique
-  userName String? @unique
+  userName String @unique
   image String?
   bio String?
   description String?
   isVerified Boolean @default(false)
-  posts Post[]
+  posts Post[] 
+  rePosts Post[] @relation(name: "RePostUserPosts")
   UserAuths UserAuth[]
-  likedPosts   UserLikedPost[]
+  likedPosts   Post[] @relation(name: "LikePostTable")
   comments       Comment[]
   followers User[] @relation(name: "Followers")
   follows   User[]  @relation(name: "Followers")
@@ -87,8 +88,10 @@ model Post{
   impression Int @default(0)
   userId Int
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  numOfUserRePost Int @default(0)
+  listUserRePost User[] @relation(name: "RePostUserPosts")
   numOfUserLikes Int @default(0)
-  likedByUser   UserLikedPost[]
+  likedByUser   User[] @relation(name: "LikePostTable")
   comments       Comment[]
   bookmarkedByUser UserBookmark[] 
 
@@ -97,21 +100,21 @@ model Post{
   deletedAt DateTime @default(now())
 }
 
-// Many to many
-model UserLikedPost {
-  user   User @relation(fields: [userId], references: [userId])
-  post  Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
-  userId Int
-  postId Int
+// Explicit Many to many
+// model UserLikedPost {
+//   user   User @relation(fields: [userId], references: [userId])
+//   post  Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+//   userId Int
+//   postId Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  @@id([userId, postId])
-  @@index([userId])
-  @@index([postId])
-  @@map("user_liked_posts")
-}
+//   @@id([userId, postId])
+//   @@index([userId])
+//   @@index([postId])
+//   @@map("user_liked_posts")
+// }
 
 // Many to many
 model UserBookmark{
