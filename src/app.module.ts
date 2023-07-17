@@ -9,6 +9,7 @@ import { AdminModule } from './admin/admin.module';
 import { PostModule } from './post/post.module';
 import { CommentModule } from './comment/comment.module';
 import { BookmarkModule } from './bookmark/bookmark.module';
+import { RecommendationModule } from './recommendation/recommendation.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { BookmarkModule } from './bookmark/bookmark.module';
     PostModule,
     CommentModule,
     BookmarkModule,
+    RecommendationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
