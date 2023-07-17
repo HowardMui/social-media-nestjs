@@ -20,6 +20,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import {
   GetOneUserLikedPost,
+  GetOneUserPost,
   GetUserBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
@@ -117,5 +118,14 @@ export class MeController {
       query,
       req.user['userId'],
     );
+  }
+
+  // Find all current user post ------------------------------------------------------------------------------------
+  @Get('posts')
+  @ApiOperation({ summary: 'List all post and rePosts. App User Only' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  getAllMePost(@Query() query: GetOneUserPost, @Req() req: Request) {
+    return this.userProfileService.getAllMePost(query, req.user['userId']);
   }
 }

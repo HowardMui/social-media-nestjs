@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   GetOneUserLikedPost,
+  GetOneUserPost,
   GetUserBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
@@ -61,7 +62,7 @@ export class MeService {
   }
 
   async userSignUp(dto: UserProfileAuthDto) {
-    const { email, password } = dto;
+    const { email, password, userName } = dto;
 
     try {
       // Generate hash password
@@ -70,6 +71,7 @@ export class MeService {
       // Create new User
       const newUser = await this.prisma.user.create({
         data: {
+          userName,
           email,
           UserAuths: {
             create: {
@@ -199,31 +201,72 @@ export class MeService {
     const { limit, offset, asc, desc } = query;
 
     try {
-      const findLikedPost = await this.prisma.userLikedPost.findMany({
+      const findLikedPost = await this.prisma.user.findUnique({
         where: {
           userId,
         },
-        skip: offset ?? 0,
-        take: limit ?? 20,
         select: {
-          post: true,
+          likedPosts: {
+            skip: offset ?? 0,
+            take: limit ?? 20,
+          },
         },
       });
 
-      const rows = findLikedPost.map((liked) => {
-        return {
-          ...liked.post,
-        };
-      });
-
       const returnObject = {
-        count: rows.length,
-        rows,
+        count: findLikedPost.likedPosts.length,
+        rows: findLikedPost.likedPosts,
         limit: limit ?? 0,
         offset: offset ?? 20,
       };
 
       return returnObject;
+
+      // return findLikedPost.likedPosts;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  // Find all current user post ------------------------------------------------------------------------------------
+
+  async getAllMePost(query: GetOneUserPost, userId: number) {
+    const { limit, offset, asc, desc } = query;
+
+    try {
+      const findUser = await this.prisma.user.findUnique({
+        where: {
+          userId,
+        },
+        include: {
+          posts: {
+            orderBy: { createdAt: 'desc' },
+            skip: offset ?? 0,
+            take: limit ?? 20,
+          },
+          rePosts: {
+            orderBy: { createdAt: 'desc' },
+            skip: offset ?? 0,
+            take: limit ?? 20,
+          },
+        },
+      });
+
+      const sortPost = await this.prisma.post.findMany({
+        where: {
+          OR: [
+            { userId },
+            {
+              postId: { in: findUser.rePosts.map((retweet) => retweet.postId) },
+            },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: offset ?? 0,
+        take: limit ?? 20,
+      });
+
+      return sortPost;
     } catch (err) {
       console.log(err);
     }
