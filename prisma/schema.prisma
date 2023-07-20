@@ -92,12 +92,20 @@ model Post{
   listUserRePost User[] @relation(name: "RePostUserPosts")
   numOfUserLikes Int @default(0)
   likedByUser   User[] @relation(name: "LikePostTable")
+  tags Tag[] @relation(name: "PostTags")
   comments       Comment[]
   bookmarkedByUser UserBookmark[] 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime @default(now())
+}
+
+model Tag{
+  tagId Int @id @default(autoincrement())
+  tagName String @unique
+  postCount Int @default(0)
+  posts Post[] @relation(name: "PostTags")
 }
 
 // Explicit Many to many
