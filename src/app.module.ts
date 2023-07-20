@@ -11,6 +11,7 @@ import { CommentModule } from './comment/comment.module';
 import { BookmarkModule } from './bookmark/bookmark.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { FileModule } from './file/file.module';
+import { TagModule } from './tag/tag.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { FileModule } from './file/file.module';
     BookmarkModule,
     RecommendationModule,
     FileModule,
+    TagModule,
   ],
   controllers: [AppController],
   providers: [AppService],
