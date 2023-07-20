@@ -8,10 +8,13 @@ import {
   GetRecommendationQueryParams,
   GetRecommendationUserQueryParams,
 } from './dto';
+import { RecommendationService } from './recommendation.service';
 
 @ApiTags('Recommendations')
 @Controller('recommendations')
 export class RecommendationController {
+  constructor(private recommendationService: RecommendationService) {}
+
   @Get('posts')
   @ApiOperation({ summary: 'Get recommendation list.' })
   @UseGuards(AuthGuard('jwt'))
@@ -19,8 +22,7 @@ export class RecommendationController {
     @Query() query: GetRecommendationQueryParams,
     @Req() req: Request,
   ) {
-    // return req.user;
-    // return this.userProfileService.getCurrentUserProfile(req.user['userId']);
+    return this.recommendationService.getRecommendationPostList(query);
   }
 
   @Get('users')
