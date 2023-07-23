@@ -56,6 +56,10 @@ export class PostService {
         where: {
           postId,
         },
+        include: {
+          tags: true,
+          comments: true,
+        },
       });
       if (!findPost) {
         return new NotFoundException();
@@ -66,11 +70,54 @@ export class PostService {
     }
   }
 
-  async createOnePost(body: CreatePostDTO, user) {
+  async createOnePost(body: CreatePostDTO, userId: number) {
+    const { tagName, ...postBody } = body;
+
     try {
-      return await this.prisma.post.create({
-        data: { ...body, userId: user['userId'] },
+      const findTags = await this.prisma.tag.findMany({
+        where: {
+          tagName: {
+            in: tagName,
+          },
+        },
       });
+
+      const newTags = tagName.filter(
+        (tag) => !findTags.some((existTag) => existTag.tagName === tag),
+      );
+
+      // Create a new post
+      await this.prisma.post.create({
+        data: {
+          ...postBody,
+          userId,
+          tags: {
+            connect: findTags.map((tag) => ({ tagName: tag.tagName })),
+            create: newTags.map((tag) => ({ tagName: tag, postCount: 1 })),
+          },
+        },
+        include: {
+          tags: true,
+        },
+      });
+
+      // Increment the postCount of existing tags
+      if (findTags.length > 0) {
+        await this.prisma.tag.updateMany({
+          where: {
+            tagName: {
+              in: tagName,
+            },
+          },
+          data: {
+            postCount: {
+              increment: 1,
+            },
+          },
+        });
+      }
+
+      return HttpStatus.CREATED;
     } catch (err) {
       console.log(err);
     }

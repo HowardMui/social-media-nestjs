@@ -45,7 +45,7 @@ export class PostController {
   @Roles(Role.User)
   @ApiOperation({ summary: 'Create new post. App User only' })
   createOnePost(@Body() body: CreatePostDTO, @Req() req: Request) {
-    return this.postService.createOnePost(body, req.user);
+    return this.postService.createOnePost(body, req.user['userId']);
   }
 
   @Patch('')

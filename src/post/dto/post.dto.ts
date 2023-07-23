@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { QueryParams } from 'src/types';
 
 export class GetPostQueryParams extends QueryParams {
@@ -11,11 +17,22 @@ export class GetPostQueryParams extends QueryParams {
 }
 
 export class CreatePostDTO {
-  @ApiPropertyOptional()
-  image: string;
-
   @ApiProperty()
   @IsNotEmpty()
+  @IsString()
   @MaxLength(200)
   content: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  image: string;
+
+  @ApiProperty({ type: [String], required: false })
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(30, {
+    each: true,
+    message: 'tagName must not be more than 30 characters long',
+  })
+  tagName: string[];
 }
