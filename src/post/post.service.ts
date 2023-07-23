@@ -25,6 +25,9 @@ export class PostService {
         where: {
           userId: userId ? userId : undefined,
         },
+        include: {
+          tags: true,
+        },
       });
 
       const returnObject = {

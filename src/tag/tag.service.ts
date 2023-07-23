@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { returnAscOrDescInQueryParams } from 'src/helper';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { CreateOneTagDTO, GetAllTagQueryParams } from './dto';
+import { CreateOneTagDTO, GetAllTagQueryParams, UpdateOneTagDTO } from './dto';
 
 @Injectable()
 export class TagService {
@@ -13,8 +13,8 @@ export class TagService {
     try {
       return await this.prisma.tag.findMany({
         orderBy: returnAscOrDescInQueryParams(asc, desc) || { tagId: 'desc' },
-        skip: offset,
-        take: limit,
+        skip: offset || 0,
+        take: limit || 20,
       });
     } catch (err) {
       console.log(err);
@@ -25,7 +25,7 @@ export class TagService {
     const { postId, tagName } = body;
 
     try {
-      await this.prisma.tag.upsert({
+      return await this.prisma.tag.upsert({
         // if found, update.  if not, create it
         where: { tagName },
         create: {
@@ -36,6 +36,7 @@ export class TagService {
           },
         },
         update: {
+          postCount: postId.length,
           posts: {
             set: postId.map((id) => ({ postId: id })),
           },
@@ -43,6 +44,48 @@ export class TagService {
       });
     } catch (err) {
       console.log(err);
+      if (err.code === 'P2025' || err.code === 'P2016') {
+        throw new NotFoundException('Post do not exist');
+      }
+    }
+  }
+
+  async updateOneTag(tagNameParam: string, body: UpdateOneTagDTO) {
+    const { postId, tagName } = body;
+    try {
+      await this.prisma.tag.update({
+        where: {
+          tagName: tagNameParam,
+        },
+        data: {
+          tagName,
+          postCount: postId.length,
+          posts: {
+            set: postId.map((id) => ({ postId: id })),
+          },
+        },
+      });
+    } catch (err) {
+      console.log(err);
+      if (err.code === 'P2025' || err.code === 'P2016') {
+        throw new NotFoundException('Tag do not exist');
+      }
+    }
+  }
+
+  async deleteOneTag(tagName: string) {
+    try {
+      await this.prisma.tag.delete({
+        where: {
+          tagName,
+        },
+      });
+      return { status: HttpStatus.OK, message: 'Deleted' };
+    } catch (err) {
+      console.log(err);
+      if (err.code === 'P2025' || err.code === 'P2016') {
+        throw new NotFoundException('Tag do not exist');
+      }
     }
   }
 }
