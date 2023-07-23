@@ -22,7 +22,7 @@ export class TagController {
   constructor(private tagService: TagService) {}
 
   @Get('')
-  @UseGuards(AuthGuard('jwt'))
+  // @UseGuards(AuthGuard('jwt'))
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'List all tags. Admin Only' })
@@ -30,8 +30,16 @@ export class TagController {
     return this.tagService.getAllTagList(query);
   }
 
+  @Get(':tagName')
+  // @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Get one tag. Admin Only' })
+  getOneTag(@Param('tagName') tagName: string) {
+    return this.tagService.getOneTag(tagName);
+  }
+
   @Post('')
-  @UseGuards(AuthGuard('jwt'))
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Create One tag, Admin Only' })
@@ -40,7 +48,6 @@ export class TagController {
   }
 
   @Patch(':tagName')
-  @UseGuards(AuthGuard('jwt'))
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Update One tag, Admin Only' })
@@ -52,9 +59,8 @@ export class TagController {
   }
 
   @Delete(':tagName')
-  @UseGuards(AuthGuard('jwt'))
-  // @UseGuards(AuthGuard('jwt'), RolesGuard)
-  // @Roles(Role.Admin)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.Admin)
   @ApiOperation({ summary: 'Delete One tag, Admin Only' })
   deleteOneTag(@Param('tagName') tagName: string) {
     return this.tagService.deleteOneTag(tagName);

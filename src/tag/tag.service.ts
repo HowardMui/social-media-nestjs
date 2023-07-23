@@ -21,6 +21,22 @@ export class TagService {
     }
   }
 
+  async getOneTag(tagName: string) {
+    try {
+      const findTag = await this.prisma.tag.findUnique({
+        where: {
+          tagName,
+        },
+      });
+
+      if (!findTag) {
+        return new NotFoundException();
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
   async createOneTag(body: CreateOneTagDTO) {
     const { postId, tagName } = body;
 
