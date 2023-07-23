@@ -12,6 +12,7 @@ import { BookmarkModule } from './bookmark/bookmark.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { FileModule } from './file/file.module';
 import { TagModule } from './tag/tag.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { TagModule } from './tag/tag.module';
     RecommendationModule,
     FileModule,
     TagModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],
