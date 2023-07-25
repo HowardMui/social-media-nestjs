@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsNumber, IsOptional, Min } from 'class-validator';
 
-export class QueryParams {
+export class RootQueryParams {
   @Transform(({ value }) => parseInt(value))
   @ApiProperty({ minimum: 1, required: false })
   @IsNumber()
@@ -15,7 +15,9 @@ export class QueryParams {
   @IsNumber()
   @IsOptional()
   offset?: number;
+}
 
+export class QueryParams extends RootQueryParams {
   @ApiPropertyOptional()
   @IsOptional()
   asc?: string;
