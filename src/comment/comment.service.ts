@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { CreateCommentDTO, GetAllPostCommentParams } from './dto';
+import { returnAscOrDescInQueryParams } from 'src/helper';
 
 @Injectable()
 export class CommentService {
@@ -12,6 +13,17 @@ export class CommentService {
       const findComment = await this.prisma.comment.findMany({
         where: {
           postId,
+          parentCommentId: null,
+        },
+        include: {
+          comments: {
+            include: {
+              comments: true,
+            },
+          },
+        },
+        orderBy: returnAscOrDescInQueryParams(asc, desc) || {
+          commentId: 'desc',
         },
         skip: offset,
         take: limit,
@@ -28,11 +40,24 @@ export class CommentService {
     }
   }
 
-  async createOneComment(user, body: CreateCommentDTO) {
+  async createOneComment(
+    userId: number,
+    postId: number,
+    body: CreateCommentDTO,
+  ) {
+    const { message, parentCommentId } = body;
+
     try {
-      return await this.prisma.comment.create({
-        data: { ...body, userId: user['userId'] },
+      const createCommentObject = await this.prisma.comment.create({
+        data: {
+          message,
+          userId,
+          postId,
+          parentCommentId,
+        },
       });
+      console.log(createCommentObject);
+      return createCommentObject;
     } catch (err) {
       console.log(err);
     }
