@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Req,
@@ -28,7 +29,7 @@ export class CommentController {
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'List comment in post' })
   getAllPostComment(
-    @Param('postId') postId: number,
+    @Param('postId', new ParseIntPipe()) postId: number,
     @Query() query: GetAllPostCommentParams,
   ): Promise<GetReqReturnType<Comment>> {
     return this.commentService.getPostCommentList(postId, query);
@@ -40,10 +41,14 @@ export class CommentController {
   @ApiOperation({ summary: 'Leave comment to post. App user only' })
   createOneComment(
     @Req() req: Request,
-    @Param('postId') postId: number,
+    @Param('postId', new ParseIntPipe()) postId: number,
     @Body() body: CreateCommentDTO,
   ) {
-    return this.commentService.createOneComment(req.user, body);
+    return this.commentService.createOneComment(
+      req.user['userId'],
+      postId,
+      body,
+    );
   }
 
   @Delete('comments/:commentId')
