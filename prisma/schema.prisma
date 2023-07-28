@@ -137,11 +137,14 @@ model UserBookmark{
 
 model Comment {
   commentId         Int       @id @default(autoincrement())
-  comment    String
+  message    String
   user       User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
   userId     Int
   post      Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
   postId    Int
+  parentCommentId Int?
+  parentComment Comment? @relation("CommentParentChildren", fields: [parentCommentId], references: [commentId], onDelete: Cascade)
+  comments Comment[] @relation("CommentParentChildren")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
