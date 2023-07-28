@@ -1,16 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsPositive, MaxLength } from 'class-validator';
 import { QueryParams } from 'src/types';
 
 export class GetAllPostCommentParams extends QueryParams {}
 
 export class CreateCommentDTO {
-  @ApiProperty()
-  @Transform(({ value }) => parseInt(value))
-  postId: number;
+  @ApiProperty({ default: null, required: false })
+  @IsOptional()
+  @IsNotEmpty()
+  @IsPositive()
+  parentCommentId: number | null;
 
   @ApiProperty()
   @MaxLength(100)
-  comment: string;
+  message: string;
 }

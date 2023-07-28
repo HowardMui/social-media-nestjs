@@ -53,10 +53,9 @@ export class CommentService {
           message,
           userId,
           postId,
-          parentCommentId,
+          parentCommentId: !parentCommentId ? null : parentCommentId,
         },
       });
-      console.log(createCommentObject);
       return createCommentObject;
     } catch (err) {
       console.log(err);
