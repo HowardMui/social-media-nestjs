@@ -4,10 +4,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
-import {
-  GetRecommendationQueryParams,
-  GetRecommendationUserQueryParams,
-} from './dto';
+import { GetRecommendationQueryParams } from './dto';
 import { RecommendationService } from './recommendation.service';
 
 @ApiTags('Recommendations')
@@ -15,24 +12,14 @@ import { RecommendationService } from './recommendation.service';
 export class RecommendationController {
   constructor(private recommendationService: RecommendationService) {}
 
-  @Get('posts')
-  @ApiOperation({ summary: 'Get recommendation list.' })
-  @UseGuards(AuthGuard('jwt'))
-  getRecommendationPostList(
+  @Get('')
+  @ApiOperation({ summary: 'Get recommendation list. App user only.' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  getRecommendationList(
     @Query() query: GetRecommendationQueryParams,
     @Req() req: Request,
   ) {
-    return this.recommendationService.getRecommendationPostList(query);
-  }
-
-  @Get('users')
-  @ApiOperation({ summary: 'Get recommendation user.' })
-  @UseGuards(AuthGuard('jwt'))
-  getRecommendationUserList(
-    @Query() query: GetRecommendationUserQueryParams,
-    @Req() req: Request,
-  ) {
-    // return req.user;
-    // return this.userProfileService.getCurrentUserProfile(req.user['userId']);
+    return this.recommendationService.getRecommendationList(query);
   }
 }
