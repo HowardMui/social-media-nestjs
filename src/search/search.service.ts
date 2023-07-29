@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { GetSearchQueryParams, SearchType } from './dto/search.dto';
-import { returnAscOrDescInQueryParams } from 'src/helper';
 
 @Injectable()
 export class SearchService {
@@ -24,11 +23,13 @@ export class SearchService {
               ],
             },
             orderBy: { userName: 'desc' },
+            skip: offset || 0,
+            take: limit || 20,
             include: {
               posts: true,
             },
           });
-        case SearchType.post:
+        case SearchType.latest:
         default:
           return await this.prisma.post.findMany({
             where: {
@@ -50,10 +51,11 @@ export class SearchService {
                 },
               ],
             },
-            orderBy: { content: 'desc' },
+            orderBy: [{ createdAt: 'desc' }, { content: 'desc' }],
+            skip: offset || 0,
+            take: limit || 20,
             include: {
               tags: true,
-              // user: true,
             },
           });
         case SearchType.tag:
@@ -64,6 +66,8 @@ export class SearchService {
                 mode: 'insensitive',
               },
             },
+            skip: offset || 0,
+            take: limit || 20,
             select: {
               posts: {
                 orderBy: { createdAt: 'desc' },

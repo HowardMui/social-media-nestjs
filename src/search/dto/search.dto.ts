@@ -5,9 +5,8 @@ import { RootQueryParams } from 'src/types';
 
 export enum SearchType {
   user = 'user',
-  post = 'post',
   tag = 'tag',
-  popular = 'popular',
+  // popular = 'popular',
   latest = 'latest',
 }
 
@@ -17,7 +16,11 @@ export class GetSearchQueryParams extends RootQueryParams {
   @IsString()
   keyword?: string;
 
-  @ApiProperty({ required: false, default: SearchType.post, enum: SearchType })
+  @ApiProperty({
+    required: false,
+    default: SearchType.latest,
+    enum: SearchType,
+  })
   @IsEnum(SearchType)
   type?: SearchType;
 
