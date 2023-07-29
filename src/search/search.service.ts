@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { GetSearchQueryParams, SearchType } from './dto/search.dto';
+import { GetSearchQueryParams } from './dto/search.dto';
+import { SearchType } from 'src/types';
 
 @Injectable()
 export class SearchService {

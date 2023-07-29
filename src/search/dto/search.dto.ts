@@ -1,14 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEnum, IsString } from 'class-validator';
-import { RootQueryParams } from 'src/types';
-
-export enum SearchType {
-  user = 'user',
-  tag = 'tag',
-  // popular = 'popular',
-  latest = 'latest',
-}
+import { RootQueryParams, SearchType } from 'src/types';
 
 export class GetSearchQueryParams extends RootQueryParams {
   @ApiProperty({ required: false })
