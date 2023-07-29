@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { CreateCommentDTO, GetAllPostCommentParams } from './dto';
 import { returnAscOrDescInQueryParams } from 'src/helper';
@@ -48,6 +48,21 @@ export class CommentService {
     const { message, parentCommentId } = body;
 
     try {
+      if (parentCommentId) {
+        // Find which post do the parentCommentId belongs to, and select that postId
+        const parentComment = await this.prisma.comment.findUnique({
+          where: { commentId: parentCommentId },
+          select: { post: true },
+        });
+
+        // If postId do not match the parentCommentId's postId, return 400
+        if (parentComment.post.postId !== postId) {
+          return new BadRequestException(
+            "Parent comment doesn't belong to the specified post",
+          );
+        }
+      }
+
       const createCommentObject = await this.prisma.comment.create({
         data: {
           message,
