@@ -12,9 +12,8 @@ export class SearchController {
   constructor(private searchService: SearchService) {}
 
   @Get('')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.Admin)
-  @ApiOperation({ summary: 'List all tags. Admin Only' })
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Search posts and users' })
   searchAllTheThings(@Query() query: GetSearchQueryParams) {
     return this.searchService.searchFn(query);
   }

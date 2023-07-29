@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { GetSearchQueryParams } from './dto/search.dto';
+import { GetSearchQueryParams, SearchType } from './dto/search.dto';
+import { returnAscOrDescInQueryParams } from 'src/helper';
 
 @Injectable()
 export class SearchService {
@@ -8,68 +9,78 @@ export class SearchService {
 
   async searchFn(query: GetSearchQueryParams) {
     try {
-      const { limit, offset, keyword } = query;
+      const { limit, offset, keyword, type } = query;
 
-      const posts = await this.prisma.post.findMany({
-        where: {
-          OR: [
-            {
-              content: {
-                contains: keyword,
-              },
-            },
-            {
-              tags: {
-                some: {
-                  tagName: {
+      switch (type) {
+        case SearchType.user:
+          return await this.prisma.user.findMany({
+            where: {
+              OR: [
+                {
+                  userName: {
                     contains: keyword,
                   },
                 },
-              },
+              ],
             },
-          ],
-        },
-        include: {
-          tags: true,
-          // user: true,
-        },
-      });
-
-      const tags = await this.prisma.tag.findMany({
-        where: {
-          tagName: {
-            contains: keyword,
-          },
-        },
-        include: {
-          posts: true,
-        },
-      });
-
-      const users = await this.prisma.user.findMany({
-        where: {
-          OR: [
-            // {
-            //   firstName: {
-            //     contains: keyword,
-            //   },
-            // },
-            // {
-            //   lastName: {
-            //     contains: keyword,
-            //   },
-            // },
-            {
-              userName: {
+            orderBy: { userName: 'desc' },
+            include: {
+              posts: true,
+            },
+          });
+        case SearchType.post:
+        default:
+          return await this.prisma.post.findMany({
+            where: {
+              OR: [
+                {
+                  content: {
+                    contains: keyword,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  tags: {
+                    some: {
+                      tagName: {
+                        contains: keyword,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+            orderBy: { content: 'desc' },
+            include: {
+              tags: true,
+              // user: true,
+            },
+          });
+        case SearchType.tag:
+          const findPostWithTagName = await this.prisma.tag.findMany({
+            where: {
+              tagName: {
                 contains: keyword,
+                mode: 'insensitive',
               },
             },
-          ],
-        },
-        include: {
-          posts: true,
-        },
-      });
+            select: {
+              posts: {
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+          });
+
+          const tempFilter = findPostWithTagName
+            .flatMap((post) => post.posts)
+            .filter(
+              (post, index, setArr) =>
+                setArr.findIndex((item) => item.postId === post.postId) ===
+                index,
+            );
+
+          return tempFilter;
+      }
     } catch (err) {
       console.log(err);
     }
