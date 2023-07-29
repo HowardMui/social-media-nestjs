@@ -7,6 +7,7 @@ import {
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { CreatePostDTO, GetPostQueryParams } from './dto';
 import { returnAscOrDescInQueryParams } from 'src/helper';
+import { Tag } from '@prisma/client';
 
 @Injectable()
 export class PostService {
@@ -74,27 +75,41 @@ export class PostService {
     const { tagName, ...postBody } = body;
 
     try {
-      const findTags = await this.prisma.tag.findMany({
-        where: {
-          tagName: {
-            in: tagName,
-          },
-        },
-      });
+      let tempExistedTags: Tag[] = [];
+      let willBeCreatedTag: string[] = [];
 
-      const newTags = tagName.filter(
-        (tag) => !findTags.some((existTag) => existTag.tagName === tag),
-      );
+      if (tagName && tagName.length > 0) {
+        tempExistedTags = await this.prisma.tag.findMany({
+          where: {
+            tagName: {
+              in: tagName,
+            },
+          },
+        });
+
+        willBeCreatedTag = tagName.filter(
+          (tag) =>
+            !tempExistedTags.some((existTag) => existTag.tagName === tag),
+        );
+      }
 
       // Create a new post
       await this.prisma.post.create({
         data: {
           ...postBody,
           userId,
-          tags: {
-            connect: findTags.map((tag) => ({ tagName: tag.tagName })),
-            create: newTags.map((tag) => ({ tagName: tag, postCount: 1 })),
-          },
+          tags:
+            tagName && tagName.length > 0
+              ? {
+                  connect: tempExistedTags.map((tag) => ({
+                    tagName: tag.tagName,
+                  })),
+                  create: willBeCreatedTag.map((tag) => ({
+                    tagName: tag,
+                    postCount: 1,
+                  })),
+                }
+              : undefined,
         },
         include: {
           tags: true,
@@ -102,7 +117,7 @@ export class PostService {
       });
 
       // Increment the postCount of existing tags
-      if (findTags.length > 0) {
+      if (tempExistedTags.length > 0) {
         await this.prisma.tag.updateMany({
           where: {
             tagName: {
@@ -125,9 +140,28 @@ export class PostService {
 
   async deleteOneUserPost(postId: number) {
     try {
-      await this.prisma.post.delete({
+      const deletedPost = await this.prisma.post.delete({
         where: { postId },
+        include: {
+          tags: true,
+        },
       });
+
+      await Promise.all(
+        deletedPost.tags.map(async (tag) => {
+          await this.prisma.tag.update({
+            where: {
+              tagId: tag.tagId,
+            },
+            data: {
+              postCount: {
+                decrement: 1,
+              },
+            },
+          });
+        }),
+      );
+
       return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);

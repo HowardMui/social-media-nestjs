@@ -30,9 +30,10 @@ export class CreatePostDTO {
   @ApiProperty({ type: [String], required: false })
   @IsArray()
   @IsString({ each: true })
+  @IsOptional()
   @MaxLength(30, {
     each: true,
     message: 'tagName must not be more than 30 characters long',
   })
-  tagName: string[];
+  tagName?: string[];
 }
