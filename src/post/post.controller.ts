@@ -52,19 +52,19 @@ export class PostController {
     return this.postService.createOnePost(body, req.user['userId']);
   }
 
-  @Patch('')
+  @Patch(':postId')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  @ApiOperation({ summary: 'Update one post. App User only' })
-  updateUserPost() {
+  @ApiOperation({ summary: 'Update one post. App User only (Not yet finish)' })
+  updateUserPost(@Param('postId', new ParseIntPipe()) postId: number) {
     return null;
   }
 
-  @Delete('')
+  @Delete(':postId')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Delete one post. Admin only' })
-  deleteUserPost(@Param('postId') postId: number) {
+  deleteUserPost(@Param('postId', new ParseIntPipe()) postId: number) {
     return this.postService.deleteOneUserPost(postId);
   }
 
