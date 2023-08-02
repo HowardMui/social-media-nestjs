@@ -3,7 +3,7 @@ import { Transform } from 'class-transformer';
 import { IsEnum } from 'class-validator';
 import { QueryParams, RecommendationType } from 'src/types';
 
-type UserRole = 'Admin' | 'Moderator' | 'User';
+// type UserRole = 'Admin' | 'Moderator' | 'User';
 
 export class GetRecommendationQueryParams extends QueryParams {
   //   @ApiProperty({ enum: ['Admin', 'Moderator', 'User'] })
@@ -17,7 +17,7 @@ export class GetRecommendationQueryParams extends QueryParams {
 
   @ApiProperty({
     required: false,
-    default: RecommendationType.recommended,
+    default: RecommendationType.post,
     enum: RecommendationType,
   })
   @IsEnum(RecommendationType)
