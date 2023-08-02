@@ -12,12 +12,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PostService } from './post.service';
 import { Request } from 'express';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
-import { CreatePostDTO, GetPostQueryParams } from './dto';
+import { CreatePostDTO, GetPostQueryParams, PostResponse } from './dto';
 import { GetReqReturnType } from 'src/types';
 import { Post as PrismaPost } from '@prisma/client';
 
@@ -28,6 +28,10 @@ export class PostController {
 
   // Basic CRUD ------------------------------------------------------------------------------------
 
+  @ApiOkResponse({
+    description: 'The post records',
+    type: PostResponse,
+  })
   @Get('')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'List All Post' })

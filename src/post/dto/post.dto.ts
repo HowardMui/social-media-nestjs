@@ -16,6 +16,41 @@ export class GetPostQueryParams extends QueryParams {
   userId?: number;
 }
 
+export class PostResponse {
+  // @ApiProperty()
+  postId: number;
+
+  // @ApiProperty()
+  // @IsString()
+  image?: string;
+
+  // @ApiProperty()
+  // @IsString()
+  content: string;
+
+  // @ApiProperty()
+  impression: number;
+
+  // @ApiProperty()
+  userId: number;
+  // user;
+  // @ApiProperty()
+  numOfUserRePost: number;
+  // listUserRePost;
+  // @ApiProperty()
+  numOfUserLikes: number;
+  // likedByUser;
+  // tags;
+  // comments;
+  // bookmarkedByUser;
+  // @ApiProperty()
+  createdAt: string;
+  // @ApiProperty()
+  updatedAt: string;
+  // @ApiProperty()
+  deletedAt: string;
+}
+
 export class CreatePostDTO {
   @ApiProperty()
   @IsNotEmpty()
