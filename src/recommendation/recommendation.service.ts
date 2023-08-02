@@ -22,6 +22,52 @@ export class RecommendationService {
               posts: true,
             },
           });
+        case RecommendationType.post:
+        default:
+          // return await this.prisma.post.aggregate({
+          //   _max: {
+          //     numOfUserLikes: true,
+          //   },
+          //   where:{
+          //     numOfUserLikes: {
+
+          //     }
+          //   }
+
+          // });
+          // return await this.prisma.post.findMany({
+          //   where: {},
+          //   orderBy: [{ numOfUserRePost: 'desc' }, { numOfUserLikes: 'desc' }],
+          //   skip: offset || 0,
+          //   take: limit || 20,
+          //   // select:{
+          //   //   _count
+          //   // }
+          // });
+          return await this.prisma.post.findMany({
+            orderBy: [{ numOfUserRePost: 'desc' }, { numOfUserLikes: 'desc' }],
+            skip: offset || 0,
+            take: limit || 20,
+            include: {
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                },
+              },
+            },
+          });
+        case RecommendationType.tag:
+          return await this.prisma.user.findMany({
+            where: {},
+            orderBy: { userName: 'desc' },
+            skip: offset || 0,
+            take: limit || 20,
+            include: {
+              posts: true,
+            },
+          });
       }
       // return await this.prisma.post.findMany({
       //   orderBy: returnAscOrDescInQueryParams(asc, desc) || {
