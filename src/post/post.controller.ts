@@ -31,6 +31,7 @@ export class PostController {
   @ApiOkResponse({
     description: 'The post records',
     type: PostResponse,
+    isArray: true,
   })
   @Get('')
   @UseGuards(AuthGuard('jwt'))
@@ -41,6 +42,10 @@ export class PostController {
     return this.postService.getAllPostLists(query);
   }
 
+  @ApiOkResponse({
+    description: 'The post records',
+    type: PostResponse,
+  })
   @Get(':postId')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get one Post.' })
