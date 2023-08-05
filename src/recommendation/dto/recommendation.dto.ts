@@ -1,11 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEnum } from 'class-validator';
-import { QueryParams, RecommendationType } from 'src/types';
+import { PostResponse } from 'src/post/dto';
+import { QueryParams, RecommendationType, RootQueryParams } from 'src/types';
 
 // type UserRole = 'Admin' | 'Moderator' | 'User';
 
-export class GetRecommendationQueryParams extends QueryParams {
+export class GetRecommendationQueryParams extends RootQueryParams {
   //   @ApiProperty({ enum: ['Admin', 'Moderator', 'User'] })
   //   role: UserRole;
   // @ApiProperty({
@@ -22,4 +23,8 @@ export class GetRecommendationQueryParams extends QueryParams {
   })
   @IsEnum(RecommendationType)
   type?: RecommendationType;
+}
+
+export class RecommendationPostResponse extends PostResponse {
+  score: number;
 }

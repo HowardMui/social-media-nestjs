@@ -1,10 +1,13 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
-import { GetRecommendationQueryParams } from './dto';
+import {
+  GetRecommendationQueryParams,
+  RecommendationPostResponse,
+} from './dto';
 import { RecommendationService } from './recommendation.service';
 
 @ApiTags('Recommendations')
@@ -12,6 +15,10 @@ import { RecommendationService } from './recommendation.service';
 export class RecommendationController {
   constructor(private recommendationService: RecommendationService) {}
 
+  @ApiOkResponse({
+    description: 'The post records',
+    type: RecommendationPostResponse,
+  })
   @Get('')
   @ApiOperation({ summary: 'Get recommendation list. App user only.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
