@@ -12,6 +12,7 @@ import {
 import {
   ApiBody,
   ApiForbiddenResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -24,6 +25,7 @@ import {
   GetUserBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
+  UserProfileResponse,
 } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
@@ -60,6 +62,9 @@ export class MeController {
 
   // User Action ------------------------------------------------------------------------------------
 
+  @ApiOkResponse({
+    type: UserProfileResponse,
+  })
   @Get('')
   @ApiOperation({ summary: 'Get Current User Profile, App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
