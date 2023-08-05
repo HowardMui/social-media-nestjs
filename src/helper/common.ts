@@ -1,14 +1,31 @@
 export const returnAscOrDescInQueryParams = (asc: string, desc: string) => {
-  const tempObject = {};
   if (!asc && !desc) {
     return undefined;
   }
 
+  const tempObject = {};
+
+  const countKeyMap = {
+    likedCount: 'likedByUser',
+    commentCount: 'comments',
+    bookmarkedCount: 'bookmarkedByUser',
+    rePostedCount: 'rePostedByUser',
+  };
+
   if (asc) {
-    tempObject[asc] = 'asc';
+    if (countKeyMap.hasOwnProperty(asc)) {
+      tempObject[countKeyMap[asc]] = { _count: 'asc' };
+    } else {
+      tempObject[asc] = 'asc';
+    }
   }
+
   if (desc) {
-    tempObject[desc] = 'desc';
+    if (countKeyMap.hasOwnProperty(desc)) {
+      tempObject[countKeyMap[desc]] = { _count: 'desc' };
+    } else {
+      tempObject[desc] = 'desc';
+    }
   }
 
   return tempObject;
