@@ -33,3 +33,9 @@ export interface GetReqReturnType<T> {
   limit: number;
   offset: number;
 }
+
+export class TimeStamp {
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string;
+}
