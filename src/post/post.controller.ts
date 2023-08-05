@@ -26,7 +26,7 @@ import { Post as PrismaPost } from '@prisma/client';
 export class PostController {
   constructor(private postService: PostService) {}
 
-  // Basic CRUD ------------------------------------------------------------------------------------
+  // * Basic CRUD ------------------------------------------------------------------------------------
 
   @ApiOkResponse({
     description: 'The post records',
@@ -74,10 +74,10 @@ export class PostController {
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Delete one post. Admin only' })
   deleteUserPost(@Param('postId', new ParseIntPipe()) postId: number) {
-    return this.postService.deleteOneUserPost(postId);
+    return this.postService.deleteOnePost(postId);
   }
 
-  // Like a post ------------------------------------------------------------------------------------
+  // * Like a post ------------------------------------------------------------------------------------
 
   @Post(':postId/like')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -101,7 +101,8 @@ export class PostController {
     return this.postService.unLikeAPost(postId, req.user['userId']);
   }
 
-  // Share a post to current User Blog ------------------------------------------------------------------------------------
+  // * Share a post to current User Blog ------------------------------------------------------------------------------------
+
   @Post(':postId/repost')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
@@ -118,7 +119,8 @@ export class PostController {
     );
   }
 
-  // cancel a post to current User Blog ------------------------------------------------------------------------------------
+  // * cancel a post to current User Blog ------------------------------------------------------------------------------------
+
   @Delete(':postId/repost')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { User } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   IsArray,
@@ -7,7 +8,8 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { QueryParams } from 'src/types';
+import { UserProfileResponse } from 'src/me/dto';
+import { QueryParams, TimeStamp } from 'src/types';
 
 export class GetPostQueryParams extends QueryParams {
   @Transform(({ value }) => parseInt(value))
@@ -16,7 +18,7 @@ export class GetPostQueryParams extends QueryParams {
   userId?: number;
 }
 
-export class PostResponse {
+export class PostResponse extends TimeStamp {
   // @ApiProperty()
   postId: number;
 
@@ -29,26 +31,28 @@ export class PostResponse {
   content: string;
 
   // @ApiProperty()
-  impression: number;
+  // impression: number;
 
   // @ApiProperty()
   userId: number;
+  user: UserProfileResponse;
   // user;
   // @ApiProperty()
-  numOfUserRePost: number;
+  // numOfUserRePost: number;
   // listUserRePost;
   // @ApiProperty()
-  numOfUserLikes: number;
+  // numOfUserLikes: number;
+
   // likedByUser;
   // tags;
   // comments;
   // bookmarkedByUser;
   // @ApiProperty()
-  createdAt: string;
-  // @ApiProperty()
-  updatedAt: string;
-  // @ApiProperty()
-  deletedAt: string;
+
+  likedCount: number;
+  commentCount: number;
+  bookmarkedCount: number;
+  rePostedCount: number;
 }
 
 export class CreatePostDTO {
