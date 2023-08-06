@@ -27,9 +27,9 @@ model User {
   description String?
   isVerified Boolean @default(false)
   posts Post[] 
-  rePosts Post[] @relation(name: "RePostUserPosts")
+  rePosts UserRePost[]
   UserAuths UserAuth[]
-  likedPosts   Post[] @relation(name: "LikePostTable")
+  likedPosts   UserLikedPost[]
   comments       Comment[]
   followers User[] @relation(name: "Followers")
   follows   User[]  @relation(name: "Followers")
@@ -86,13 +86,10 @@ model Post{
   postId      Int      @id @default(autoincrement())
   image String?
   content String
-  impression Int @default(0)
   userId Int
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  numOfUserRePost Int @default(0)
-  listUserRePost User[] @relation(name: "RePostUserPosts")
-  numOfUserLikes Int @default(0)
-  likedByUser   User[] @relation(name: "LikePostTable")
+  rePostedByUser UserRePost[]
+  likedByUser   UserLikedPost[]
   tags Tag[] @relation(name: "PostTags")
   comments       Comment[]
   bookmarkedByUser UserBookmark[] 
@@ -105,35 +102,7 @@ model Post{
 model Tag{
   tagId Int @id @default(autoincrement())
   tagName String @unique
-  postCount Int @default(0)
   posts Post[] @relation(name: "PostTags")
-}
-
-// Explicit Many to many
-// model UserLikedPost {
-//   user   User @relation(fields: [userId], references: [userId])
-//   post  Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
-//   userId Int
-//   postId Int
-
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-
-//   @@id([userId, postId])
-//   @@index([userId])
-//   @@index([postId])
-//   @@map("user_liked_posts")
-// }
-
-// Many to many
-model UserBookmark{
-  postId Int
-  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
-  userId Int
-  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  @@id([postId, userId])
-  @@map("user_bookmarked_posts")
 }
 
 model Comment {
@@ -150,4 +119,40 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime @default(now())
+}
+
+// * Explicit Many to many
+model UserLikedPost {
+  user   User @relation(fields: [userId], references: [userId])
+  post  Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  userId Int
+  postId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, postId])
+  // @@index([userId])
+  // @@index([postId])
+  @@map("user_liked_posts")
+}
+
+model UserBookmark{
+  postId Int
+  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  userId Int
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@map("user_bookmarked_posts")
+}
+
+model UserRePost {
+  postId Int
+  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  userId Int
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@map("user_rePost_posts")
 }
