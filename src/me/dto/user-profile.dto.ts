@@ -55,8 +55,6 @@ export class UpdateUserProfileDTO {
   description?: string;
 }
 
-export class GetUserBookmarkedPost extends QueryParams {}
-
 export class GetOneUserLikedPost extends QueryParams {}
 
 export class GetOneUserPost extends QueryParams {}
