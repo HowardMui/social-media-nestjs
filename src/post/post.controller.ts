@@ -18,8 +18,6 @@ import { Request } from 'express';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { CreatePostDTO, GetPostQueryParams, PostResponse } from './dto';
-import { GetReqReturnType } from 'src/types';
-import { Post as PrismaPost } from '@prisma/client';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -36,9 +34,7 @@ export class PostController {
   @Get('')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'List All Post' })
-  getAllPosts(
-    @Query() query: GetPostQueryParams,
-  ): Promise<GetReqReturnType<PrismaPost>> {
+  getAllPosts(@Query() query: GetPostQueryParams) {
     return this.postService.getAllPostLists(query);
   }
 
