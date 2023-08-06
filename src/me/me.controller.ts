@@ -22,20 +22,22 @@ import { Request, Response } from 'express';
 import {
   GetOneUserLikedPost,
   GetOneUserPost,
-  GetUserBookmarkedPost,
+  GetMeBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
   UserProfileResponse,
+  GetMeBookMarkedPostRes,
 } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
+import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 
 @ApiTags('me')
 @Controller('me')
 export class MeController {
   constructor(private userProfileService: MeService) {}
 
-  // Auth ------------------------------------------------------------------------------------
+  // * Auth ------------------------------------------------------------------------------------
 
   @ApiBody({ type: UserProfileAuthDto })
   @ApiForbiddenResponse()
@@ -60,7 +62,7 @@ export class MeController {
     return this.userProfileService.logout(res);
   }
 
-  // User Action ------------------------------------------------------------------------------------
+  // * User Action ------------------------------------------------------------------------------------
 
   @ApiOkResponse({
     type: UserProfileResponse,
@@ -85,35 +87,33 @@ export class MeController {
   @ApiOperation({ summary: 'Get Current User followers. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getMeFollowers() {
-    return;
+  getMeFollowers(@Req() req: Request, @Query() query: any) {
+    return this.userProfileService.getUserFollowers(req.user['userId'], query);
   }
 
-  @Get('follows')
+  @Get('following')
   @ApiOperation({ summary: 'Get Current User follows. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getMeFollows() {
-    return;
+  getMeFollows(@Req() req: Request, @Query() query: any) {
+    return this.userProfileService.getUserFollowing(req.user['userId'], query);
   }
 
-  // bookmark Action ------------------------------------------------------------------------------------
+  // * bookmark Action ------------------------------------------------------------------------------------
 
   @Get('posts/bookmark')
+  @ApiOkResponsePaginated(GetMeBookMarkedPostRes)
   @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getMeBookmarkList(
-    @Query() query: GetUserBookmarkedPost,
-    @Req() req: Request,
-  ) {
-    return this.userProfileService.getAllUserBookmarkList(
+  getMeBookmarkList(@Query() query: GetMeBookmarkedPost, @Req() req: Request) {
+    return this.userProfileService.getAllMeBookmarkList(
       query,
       req.user['userId'],
     );
   }
 
-  // like Action ------------------------------------------------------------------------------------
+  // * like Action ------------------------------------------------------------------------------------
   @Get('posts/like')
   @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -125,7 +125,7 @@ export class MeController {
     );
   }
 
-  // Find all current user post ------------------------------------------------------------------------------------
+  // * Find all current user post ------------------------------------------------------------------------------------
   @Get('posts')
   @ApiOperation({ summary: 'List all post and rePosts. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
