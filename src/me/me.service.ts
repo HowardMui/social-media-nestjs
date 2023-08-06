@@ -3,7 +3,7 @@ import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   GetOneUserLikedPost,
   GetOneUserPost,
-  GetUserBookmarkedPost,
+  GetMeBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
 } from './dto';
@@ -20,7 +20,7 @@ export class MeService {
     private config: ConfigService,
   ) {}
 
-  // Auth ------------------------------------------------------------------------------------
+  // * Auth ------------------------------------------------------------------------------------
 
   async userSignIn(dto: UserProfileAuthDto, res: Response) {
     const { email, password } = dto;
@@ -127,7 +127,7 @@ export class MeService {
     };
   }
 
-  // User Action ------------------------------------------------------------------------------------
+  // * User Action ------------------------------------------------------------------------------------
 
   async getCurrentUserProfile(currentUserId: number) {
     try {
@@ -156,36 +156,108 @@ export class MeService {
     }
   }
 
-  // bookmark Action ------------------------------------------------------------------------------------
+  // * Follower or Following Action ---------------------------------------------------------------------
 
-  async getAllUserBookmarkList(query: GetUserBookmarkedPost, userId: number) {
-    const { limit, offset, asc, desc } = query;
+  async getUserFollowers(userId: number, query: any) {
+    const { limit, offset } = query;
 
     try {
-      const findBookmarkPost = await this.prisma.user.findMany({
+      const currentUser = await this.prisma.user.findUnique({
         where: {
           userId,
         },
         select: {
-          bookmarkedPosts: {
-            skip: offset ?? 0,
-            take: limit ?? 20,
+          followers: {
+            skip: offset || 0,
+            take: limit || 20,
+            include: {
+              followers: true,
+            },
+          },
+          _count: {
             select: {
-              post: true,
+              followers: true,
             },
           },
         },
       });
 
-      const rows = findBookmarkPost[0].bookmarkedPosts.map((bookmark) => {
-        return {
-          ...bookmark.post,
-        };
+      const followersList = currentUser.followers.map(
+        ({ followers, ...restFollower }) => {
+          const isFollowing = followers.some(
+            (eachUserInFollowers) => eachUserInFollowers.userId === userId,
+          );
+          return {
+            ...restFollower,
+            isFollowing,
+          };
+        },
+      );
+
+      return {
+        count: currentUser._count.followers,
+        rows: followersList,
+      };
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
+  }
+
+  async getUserFollowing(userId: number, query: any) {
+    const { limit, offset } = query;
+    try {
+      const findFollowing = await this.prisma.user.findUnique({
+        where: {
+          userId,
+        },
+        select: {
+          follows: {
+            skip: offset || 0,
+            take: limit || 20,
+          },
+          _count: {
+            select: {
+              follows: true,
+            },
+          },
+        },
+      });
+
+      return {
+        following: findFollowing.follows,
+        followingCount: findFollowing._count.follows,
+      };
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
+  }
+
+  // * bookmark Action ------------------------------------------------------------------------------------
+
+  async getAllMeBookmarkList(query: GetMeBookmarkedPost, userId: number) {
+    const { limit, offset } = query;
+
+    try {
+      const findBookmarkPost = await this.prisma.userBookmark.findMany({
+        where: {
+          userId,
+        },
+        skip: offset ?? 0,
+        take: limit ?? 20,
+        select: {
+          post: {
+            include: {
+              user: true,
+            },
+          },
+        },
       });
 
       const returnObject = {
-        count: rows.length,
-        rows,
+        count: findBookmarkPost.length,
+        rows: findBookmarkPost.map((item) => item.post),
         limit: limit ?? 0,
         offset: offset ?? 20,
       };
@@ -195,7 +267,7 @@ export class MeService {
     }
   }
 
-  // like Action ------------------------------------------------------------------------------------
+  // * like Action ------------------------------------------------------------------------------------
 
   async getMeLikedPostList(query: GetOneUserLikedPost, userId: number) {
     const { limit, offset, asc, desc } = query;
@@ -228,45 +300,43 @@ export class MeService {
     }
   }
 
-  // Find all current user post ------------------------------------------------------------------------------------
+  // * Find all current user post ------------------------------------------------------------------------------------
 
   async getAllMePost(query: GetOneUserPost, userId: number) {
     const { limit, offset, asc, desc } = query;
 
     try {
-      const findUser = await this.prisma.user.findUnique({
-        where: {
-          userId,
-        },
-        include: {
-          posts: {
-            orderBy: { createdAt: 'desc' },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-          },
-          rePosts: {
-            orderBy: { createdAt: 'desc' },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-          },
-        },
-      });
-
-      const sortPost = await this.prisma.post.findMany({
-        where: {
-          OR: [
-            { userId },
-            {
-              postId: { in: findUser.rePosts.map((retweet) => retweet.postId) },
-            },
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: offset ?? 0,
-        take: limit ?? 20,
-      });
-
-      return sortPost;
+      // const findUser = await this.prisma.user.findUnique({
+      //   where: {
+      //     userId,
+      //   },
+      //   include: {
+      //     posts: {
+      //       orderBy: { createdAt: 'desc' },
+      //       skip: offset ?? 0,
+      //       take: limit ?? 20,
+      //     },
+      //     rePosts: {
+      //       orderBy: { createdAt: 'desc' },
+      //       skip: offset ?? 0,
+      //       take: limit ?? 20,
+      //     },
+      //   },
+      // });
+      // const sortPost = await this.prisma.post.findMany({
+      //   where: {
+      //     OR: [
+      //       { userId },
+      //       {
+      //         postId: { in: findUser.rePosts.map((retweet) => retweet.postId) },
+      //       },
+      //     ],
+      //   },
+      //   orderBy: { createdAt: 'desc' },
+      //   skip: offset ?? 0,
+      //   take: limit ?? 20,
+      // });
+      // return sortPost;
     } catch (err) {
       console.log(err);
     }
