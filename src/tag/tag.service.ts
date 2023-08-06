@@ -46,13 +46,13 @@ export class TagService {
         where: { tagName },
         create: {
           tagName,
-          postCount: postId.length,
+          // postCount: postId.length,
           posts: {
             connect: postId.map((id) => ({ postId: id })),
           },
         },
         update: {
-          postCount: postId.length,
+          // postCount: postId.length,
           posts: {
             set: postId.map((id) => ({ postId: id })),
           },
@@ -75,7 +75,7 @@ export class TagService {
         },
         data: {
           tagName,
-          postCount: postId.length,
+          // postCount: postId.length,
           posts: {
             set: postId.map((id) => ({ postId: id })),
           },
