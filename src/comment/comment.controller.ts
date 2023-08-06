@@ -17,8 +17,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Request } from 'express';
-import { GetReqReturnType } from 'src/types';
-import { Comment } from '@prisma/client';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -31,7 +29,7 @@ export class CommentController {
   getAllPostComment(
     @Param('postId', new ParseIntPipe()) postId: number,
     @Query() query: GetAllPostCommentParams,
-  ): Promise<GetReqReturnType<Comment>> {
+  ) {
     return this.commentService.getPostCommentList(postId, query);
   }
 

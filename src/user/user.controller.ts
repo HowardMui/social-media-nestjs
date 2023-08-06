@@ -18,8 +18,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { GetUserQueryParams, UpdateUserDTO } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
-import { GetReqReturnType } from 'src/types';
-import { User } from '@prisma/client';
 import { Request } from 'express';
 
 @ApiTags('user')
@@ -33,9 +31,7 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'List all users. Admin Only' })
-  getAllUser(
-    @Query() query: GetUserQueryParams,
-  ): Promise<GetReqReturnType<User>> {
+  getAllUser(@Query() query: GetUserQueryParams) {
     return this.userService.getUserList(query);
   }
 
