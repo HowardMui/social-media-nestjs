@@ -27,7 +27,7 @@ export class QueryParams extends RootQueryParams {
   desc?: string;
 }
 
-export interface GetReqReturnType<T> {
+export class CustomResWithQueryType<T> {
   count: number;
   rows: T[];
   limit: number;
