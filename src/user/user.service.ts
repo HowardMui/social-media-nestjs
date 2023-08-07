@@ -43,7 +43,7 @@ export class UserService {
         },
         include: {
           followers: true,
-          follows: true,
+          following: true,
         },
       });
       if (!findOneUser) {

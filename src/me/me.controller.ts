@@ -20,13 +20,18 @@ import { MeService } from './me.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import {
-  GetOneUserLikedPost,
   GetOneUserPost,
   GetMeBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
-  UserProfileResponse,
   GetMeBookMarkedPostRes,
+  GetMeLikedQueryParam,
+  GetMeLikedResponse,
+  GetMeFollowingResponse,
+  GetMeFollowersResponse,
+  GetMeFollowingQueryParam,
+  GetMeFollowersQueryParam,
+  MeProfileResponse,
 } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
@@ -64,16 +69,13 @@ export class MeController {
 
   // * User Action ------------------------------------------------------------------------------------
 
-  @ApiOkResponse({
-    type: UserProfileResponse,
-  })
   @Get('')
+  @ApiOkResponse({ type: MeProfileResponse })
   @ApiOperation({ summary: 'Get Current User Profile, App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
   getProfile(@Req() req: Request) {
-    return req.user;
-    // return this.userProfileService.getCurrentUserProfile(req.user['userId']);
+    return this.userProfileService.getCurrentUserProfile(req.user['userId']);
   }
 
   @Patch('')
@@ -84,18 +86,23 @@ export class MeController {
   }
 
   @Get('followers')
+  @ApiOkResponsePaginated(GetMeFollowersResponse)
   @ApiOperation({ summary: 'Get Current User followers. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getMeFollowers(@Req() req: Request, @Query() query: any) {
+  getMeFollowers(
+    @Req() req: Request,
+    @Query() query: GetMeFollowersQueryParam,
+  ) {
     return this.userProfileService.getUserFollowers(req.user['userId'], query);
   }
 
   @Get('following')
-  @ApiOperation({ summary: 'Get Current User follows. App User Only' })
+  @ApiOkResponsePaginated(GetMeFollowingResponse)
+  @ApiOperation({ summary: 'Get Current User following. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getMeFollows(@Req() req: Request, @Query() query: any) {
+  getMeFollows(@Req() req: Request, @Query() query: GetMeFollowingQueryParam) {
     return this.userProfileService.getUserFollowing(req.user['userId'], query);
   }
 
@@ -115,10 +122,11 @@ export class MeController {
 
   // * like Action ------------------------------------------------------------------------------------
   @Get('posts/like')
+  @ApiOkResponsePaginated(GetMeLikedResponse)
   @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getMeLikedPost(@Query() query: GetOneUserLikedPost, @Req() req: Request) {
+  getMeLikedPost(@Query() query: GetMeLikedQueryParam, @Req() req: Request) {
     return this.userProfileService.getMeLikedPostList(
       query,
       req.user['userId'],

@@ -1,16 +1,19 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
-  GetOneUserLikedPost,
   GetOneUserPost,
   GetMeBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
+  GetMeLikedQueryParam,
+  GetMeFollowingQueryParam,
+  GetMeFollowersQueryParam,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import * as _ from 'lodash';
 
 @Injectable()
 export class MeService {
@@ -131,11 +134,27 @@ export class MeService {
 
   async getCurrentUserProfile(currentUserId: number) {
     try {
-      return await this.prisma.user.findUnique({
+      const findMe = await this.prisma.user.findUnique({
         where: {
           userId: currentUserId,
         },
+        include: {
+          _count: {
+            select: {
+              followers: true,
+              following: true,
+            },
+          },
+        },
       });
+      const { _count, ...rest } = findMe;
+      const transformedMe = {
+        ...rest,
+        followersCount: _count.followers,
+        followingCount: _count.following,
+      };
+
+      return transformedMe;
     } catch (err) {
       console.log(err);
     }
@@ -158,7 +177,7 @@ export class MeService {
 
   // * Follower or Following Action ---------------------------------------------------------------------
 
-  async getUserFollowers(userId: number, query: any) {
+  async getUserFollowers(userId: number, query: GetMeFollowersQueryParam) {
     const { limit, offset } = query;
 
     try {
@@ -182,6 +201,7 @@ export class MeService {
         },
       });
 
+      // * Add isFollowing boolean into return list
       const followersList = currentUser.followers.map(
         ({ followers, ...restFollower }) => {
           const isFollowing = followers.some(
@@ -194,17 +214,21 @@ export class MeService {
         },
       );
 
-      return {
-        count: currentUser._count.followers,
+      const returnObject = {
+        count: followersList.length,
         rows: followersList,
+        limit: limit ?? 0,
+        offset: offset ?? 20,
       };
+
+      return returnObject;
     } catch (err) {
       console.log(err);
       throw err;
     }
   }
 
-  async getUserFollowing(userId: number, query: any) {
+  async getUserFollowing(userId: number, query: GetMeFollowingQueryParam) {
     const { limit, offset } = query;
     try {
       const findFollowing = await this.prisma.user.findUnique({
@@ -212,22 +236,21 @@ export class MeService {
           userId,
         },
         select: {
-          follows: {
+          following: {
             skip: offset || 0,
             take: limit || 20,
-          },
-          _count: {
-            select: {
-              follows: true,
-            },
           },
         },
       });
 
-      return {
-        following: findFollowing.follows,
-        followingCount: findFollowing._count.follows,
+      const returnObject = {
+        count: findFollowing.following.length,
+        rows: findFollowing.following,
+        limit: limit ?? 0,
+        offset: offset ?? 20,
       };
+
+      return returnObject;
     } catch (err) {
       console.log(err);
       throw err;
@@ -269,32 +292,52 @@ export class MeService {
 
   // * like Action ------------------------------------------------------------------------------------
 
-  async getMeLikedPostList(query: GetOneUserLikedPost, userId: number) {
-    const { limit, offset, asc, desc } = query;
+  async getMeLikedPostList(query: GetMeLikedQueryParam, userId: number) {
+    const { limit, offset } = query;
 
     try {
-      const findLikedPost = await this.prisma.user.findUnique({
+      const findLikedPost = await this.prisma.userLikedPost.findMany({
         where: {
           userId,
         },
+        skip: offset ?? 0,
+        take: limit ?? 20,
         select: {
-          likedPosts: {
-            skip: offset ?? 0,
-            take: limit ?? 20,
+          post: {
+            include: {
+              user: true,
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostedByUser: true,
+                },
+              },
+            },
           },
         },
       });
 
+      const transformedPosts = _.map(findLikedPost, ({ post }) => {
+        const { _count, ...rest } = post;
+        return {
+          ...rest,
+          likedCount: _count.likedByUser,
+          commentCount: _count.comments,
+          bookmarkedCount: _count.bookmarkedByUser,
+          rePostedCount: _count.rePostedByUser,
+        };
+      });
+
       const returnObject = {
-        count: findLikedPost.likedPosts.length,
-        rows: findLikedPost.likedPosts,
+        count: findLikedPost.length,
+        rows: transformedPosts,
         limit: limit ?? 0,
         offset: offset ?? 20,
       };
 
       return returnObject;
-
-      // return findLikedPost.likedPosts;
     } catch (err) {
       console.log(err);
     }
