@@ -32,7 +32,7 @@ model User {
   likedPosts   UserLikedPost[]
   comments       Comment[]
   followers User[] @relation(name: "Followers")
-  follows   User[]  @relation(name: "Followers")
+  following   User[]  @relation(name: "Followers")
   bookmarkedPosts UserBookmark[] 
 
   createdAt DateTime @default(now())
