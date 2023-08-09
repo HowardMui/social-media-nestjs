@@ -349,6 +349,98 @@ export class MeService {
     const { limit, offset, asc, desc } = query;
 
     try {
+      //* adjusted new data list
+      // const findUserWithRePost = await this.prisma.user.findMany({
+      //   where: {
+      //     userId,
+      //   },
+
+      //   select: {
+      //     // skip: offset ?? 0,
+      //     posts: {
+      //       include: {
+      //         user: true,
+      //         tags: true,
+      //         _count: {
+      //           select: {
+      //             likedByUser: true,
+      //             comments: true,
+      //             bookmarkedByUser: true,
+      //             rePostedByUser: true,
+      //           },
+      //         },
+      //       },
+      //       orderBy: {
+      //         postId: 'desc',
+      //       },
+      //       skip: offset ?? 0,
+      //       take: limit ?? 20,
+      //     },
+      //     rePosts: {
+      //       select: {
+      //         post: {
+      //           include: {
+      //             user: true,
+      //             tags: true,
+      //             _count: {
+      //               select: {
+      //                 likedByUser: true,
+      //                 comments: true,
+      //                 bookmarkedByUser: true,
+      //                 rePostedByUser: true,
+      //               },
+      //             },
+      //           },
+      //         },
+      //       },
+      //       orderBy: {
+      //         post: {
+      //           postId: 'desc',
+      //         },
+      //       },
+      //       skip: offset ?? 0,
+      //       take: limit ?? 20,
+      //     },
+      //   },
+      // });
+
+      // return findUserWithRePost;
+
+      // const transformedPosts = findUserWithRePost
+      //   .flatMap(({ posts, rePosts }) => [
+      //     ...posts,
+      //     ...rePosts.map((repost) => repost.post),
+      //   ])
+      //   .map(({ _count, ...post }) => ({
+      //     ...post,
+      //     likedCount: _count.likedByUser,
+      //     commentCount: _count.comments,
+      //     bookmarkedCount: _count.bookmarkedByUser,
+      //     rePostedCount: _count.rePostedByUser,
+      //   }));
+
+      // return _.orderBy(transformedPosts, ['createdAt'], ['desc']);
+
+      // TODO raw SQL
+      // const findUserPost = await this.prisma.$queryRaw`
+      //  SELECT *
+      //   FROM "User" AS u
+      //   LEFT OUTER JOIN "user_rePost_posts" ON u."userId" = "user_rePost_posts"."userId"
+      //   LEFT JOIN "Post" ON "user_rePost_posts"."postId" = "Post"."postId"
+      //   WHERE u."userId" = ${userId}
+      // `;
+      const findUserPost = await this.prisma.$queryRaw`
+     SELECT "User".*, "Post".*, "user_rePost_posts".*
+  FROM "User"
+  LEFT JOIN "Post" ON "User"."userId" = "Post"."userId"
+  LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
+  WHERE "User"."userId" = ${userId}
+      `;
+
+      return findUserPost;
+
+      // * origin data list
+
       // const findUser = await this.prisma.user.findUnique({
       //   where: {
       //     userId,
@@ -360,18 +452,31 @@ export class MeService {
       //       take: limit ?? 20,
       //     },
       //     rePosts: {
-      //       orderBy: { createdAt: 'desc' },
+      //       select: {
+      //         post: true,
+      //       },
+      //       orderBy: {
+      //         post: {
+      //           createdAt: 'desc',
+      //         },
+      //       },
       //       skip: offset ?? 0,
       //       take: limit ?? 20,
       //     },
       //   },
       // });
+
+      // return findUser;
+      // return findUserWithRePost;
+
       // const sortPost = await this.prisma.post.findMany({
       //   where: {
       //     OR: [
       //       { userId },
       //       {
-      //         postId: { in: findUser.rePosts.map((retweet) => retweet.postId) },
+      //         postId: {
+      //           in: findUser.rePosts.map((repost) => repost.post.postId),
+      //         },
       //       },
       //     ],
       //   },
