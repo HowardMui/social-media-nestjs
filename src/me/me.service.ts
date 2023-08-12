@@ -1,19 +1,20 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
-  GetOneUserPost,
-  GetMeBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
-  GetMeLikedQueryParam,
-  GetMeFollowingQueryParam,
-  GetMeFollowersQueryParam,
+  GetMeLikedQueryParams,
+  GetMeFollowingQueryParams,
+  GetMeFollowersQueryParams,
+  GetMePostQueryParams,
+  GetMeBookmarkedQueryParams,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as _ from 'lodash';
+import { PostResponse } from 'src/post/dto';
 
 @Injectable()
 export class MeService {
@@ -177,7 +178,7 @@ export class MeService {
 
   // * Follower or Following Action ---------------------------------------------------------------------
 
-  async getUserFollowers(userId: number, query: GetMeFollowersQueryParam) {
+  async getUserFollowers(userId: number, query: GetMeFollowersQueryParams) {
     const { limit, offset } = query;
 
     try {
@@ -190,11 +191,6 @@ export class MeService {
             skip: offset || 0,
             take: limit || 20,
             include: {
-              followers: true,
-            },
-          },
-          _count: {
-            select: {
               followers: true,
             },
           },
@@ -228,7 +224,7 @@ export class MeService {
     }
   }
 
-  async getUserFollowing(userId: number, query: GetMeFollowingQueryParam) {
+  async getUserFollowing(userId: number, query: GetMeFollowingQueryParams) {
     const { limit, offset } = query;
     try {
       const findFollowing = await this.prisma.user.findUnique({
@@ -239,13 +235,29 @@ export class MeService {
           following: {
             skip: offset || 0,
             take: limit || 20,
+            include: {
+              followers: true,
+            },
           },
         },
       });
 
+      // * Add isFollowing boolean into return list
+      const followingList = findFollowing.following.map(
+        ({ followers, ...restFollower }) => {
+          const isFollowing = followers.some(
+            (eachUserInFollowers) => eachUserInFollowers.userId === userId,
+          );
+          return {
+            ...restFollower,
+            isFollowing,
+          };
+        },
+      );
+
       const returnObject = {
-        count: findFollowing.following.length,
-        rows: findFollowing.following,
+        count: followingList.length,
+        rows: followingList,
         limit: limit ?? 0,
         offset: offset ?? 20,
       };
@@ -259,7 +271,10 @@ export class MeService {
 
   // * bookmark Action ------------------------------------------------------------------------------------
 
-  async getAllMeBookmarkList(query: GetMeBookmarkedPost, userId: number) {
+  async getAllMeBookmarkList(
+    query: GetMeBookmarkedQueryParams,
+    userId: number,
+  ) {
     const { limit, offset } = query;
 
     try {
@@ -273,14 +288,35 @@ export class MeService {
           post: {
             include: {
               user: true,
+              tags: true,
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostedByUser: true,
+                },
+              },
             },
           },
         },
       });
 
+      const transformedPosts = _.map(findBookmarkPost, ({ post }) => {
+        const { _count, ...rest } = post;
+        return {
+          ...rest,
+          tags: post.tags.map((t) => t.tagName),
+          likedCount: _count.likedByUser,
+          commentCount: _count.comments,
+          bookmarkedCount: _count.bookmarkedByUser,
+          rePostedCount: _count.rePostedByUser,
+        };
+      });
+
       const returnObject = {
-        count: findBookmarkPost.length,
-        rows: findBookmarkPost.map((item) => item.post),
+        count: transformedPosts.length,
+        rows: transformedPosts,
         limit: limit ?? 0,
         offset: offset ?? 20,
       };
@@ -292,7 +328,7 @@ export class MeService {
 
   // * like Action ------------------------------------------------------------------------------------
 
-  async getMeLikedPostList(query: GetMeLikedQueryParam, userId: number) {
+  async getMeLikedPostList(query: GetMeLikedQueryParams, userId: number) {
     const { limit, offset } = query;
 
     try {
@@ -306,6 +342,7 @@ export class MeService {
           post: {
             include: {
               user: true,
+              tags: true,
               _count: {
                 select: {
                   likedByUser: true,
@@ -323,6 +360,7 @@ export class MeService {
         const { _count, ...rest } = post;
         return {
           ...rest,
+          tags: post.tags.map((t) => t.tagName),
           likedCount: _count.likedByUser,
           commentCount: _count.comments,
           bookmarkedCount: _count.bookmarkedByUser,
@@ -345,8 +383,8 @@ export class MeService {
 
   // * Find all current user post ------------------------------------------------------------------------------------
 
-  async getAllMePost(query: GetOneUserPost, userId: number) {
-    const { limit, offset, asc, desc } = query;
+  async getAllMePost(query: GetMePostQueryParams, userId: number) {
+    const { limit, offset } = query;
 
     try {
       //* adjusted new data list
@@ -420,10 +458,11 @@ export class MeService {
       //   }));
 
       // return _.orderBy(transformedPosts, ['createdAt'], ['desc']);
-
       // TODO raw SQL
       // * UNION ALl (Need)
-      const findAllUserRePost = await this.prisma.$queryRaw`
+      const findAllUserRePost = await this.prisma.$queryRaw<
+        Promise<PostResponse[]>
+      >`
        SELECT "Post".*, pt."tags",
           COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
           COALESCE(lc.likesCount::integer, 0) AS "likesCount",
@@ -516,7 +555,15 @@ export class MeService {
         LIMIT ${limit || 20}
         OFFSET ${offset || 0}
         `;
-      return findAllUserRePost;
+
+      const returnObject = {
+        count: findAllUserRePost.length,
+        rows: findAllUserRePost,
+        limit,
+        offset,
+      };
+
+      return returnObject;
 
       // * origin data list
 
