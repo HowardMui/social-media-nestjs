@@ -70,6 +70,18 @@ export class PostService {
 
   async getOnePost(postId: number) {
     try {
+      //TODO Test get all post tag with SQL
+      // const fineOnePost = await this.prisma.$queryRaw`
+      // SELECT "Post".*, JSON_AGG(DISTINCT jsonb_build_object('tagId',"Tag"."tagId", 'tagName',"Tag"."tagName")) AS "tags"
+      //   FROM "Post"
+      //   LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
+      //   LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
+      //   WHERE "Post"."postId" = ${postId}
+      //   GROUP BY "Post"."postId"
+      //   `;
+      // return fineOnePost;
+
+      // * origin
       const findAPost = await this.prisma.post.findUnique({
         where: {
           postId,
