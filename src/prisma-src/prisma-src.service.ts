@@ -11,6 +11,7 @@ export class PrismaSrcService extends PrismaClient {
           url: config.get('DATABASE_URL'),
         },
       },
+      // log: ['error', 'info', 'query', 'warn'],
     });
   }
 
