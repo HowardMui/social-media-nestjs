@@ -472,7 +472,7 @@ export class MeService {
         LEFT JOIN "Post" ON "Post"."postId" = "user_rePost_posts"."postId"
         LEFT JOIN (
           SELECT "Post"."postId", 
-          CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG(DISTINCT jsonb_build_object('tagId', "Tag"."tagId", 'tagName', "Tag"."tagName"))
+          CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
             ELSE '[]' END AS "tags"
           FROM "Post"
         LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
@@ -516,7 +516,7 @@ export class MeService {
         LEFT JOIN "Post" ON "Post"."userId" = "User"."userId"
         LEFT JOIN (
           SELECT "Post"."postId", 
-          CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG(DISTINCT jsonb_build_object('tagId', "Tag"."tagId", 'tagName', "Tag"."tagName"))
+          CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
             ELSE '[]' END AS "tags"
           FROM "Post"
           LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
