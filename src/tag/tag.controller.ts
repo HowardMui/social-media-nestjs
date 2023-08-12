@@ -11,7 +11,11 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CreateOneTagDTO, GetAllTagQueryParams, UpdateOneTagDTO } from './dto';
+import {
+  CreateOneTagDTO,
+  GetAllTagQueryParamsWithFilter,
+  UpdateOneTagDTO,
+} from './dto';
 import { TagService } from './tag.service';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
@@ -26,7 +30,7 @@ export class TagController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'List all tags. Admin Only' })
-  getAllTags(@Query() query: GetAllTagQueryParams) {
+  getAllTags(@Query() query: GetAllTagQueryParamsWithFilter) {
     return this.tagService.getAllTagList(query);
   }
 

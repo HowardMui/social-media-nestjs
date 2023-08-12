@@ -1,18 +1,24 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { returnAscOrDescInQueryParams } from 'src/helper';
+import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { CreateOneTagDTO, GetAllTagQueryParams, UpdateOneTagDTO } from './dto';
+import {
+  CreateOneTagDTO,
+  GetAllTagQueryParamsWithFilter,
+  UpdateOneTagDTO,
+} from './dto';
 
 @Injectable()
 export class TagService {
   constructor(private prisma: PrismaSrcService) {}
 
-  async getAllTagList(query: GetAllTagQueryParams) {
+  async getAllTagList(query: GetAllTagQueryParamsWithFilter) {
     const { limit, offset, asc, desc } = query;
 
     try {
       return await this.prisma.tag.findMany({
-        orderBy: returnAscOrDescInQueryParams(asc, desc) || { tagId: 'desc' },
+        orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
+          tagId: 'desc',
+        },
         skip: offset || 0,
         take: limit || 20,
       });

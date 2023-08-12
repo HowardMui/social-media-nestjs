@@ -1,7 +1,7 @@
-import { QueryParams } from 'src/types';
+import { QueryParamsWithFilter } from 'src/types';
 import { IsOptional, IsString, Max } from 'class-validator';
 
-export class GetUserQueryParams extends QueryParams {}
+export class GetUserQueryParamsWithFilter extends QueryParamsWithFilter {}
 
 export class UpdateUserDTO {
   @IsString()

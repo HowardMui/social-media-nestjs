@@ -15,7 +15,7 @@ import { UserService } from './user.service';
 
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { GetUserQueryParams, UpdateUserDTO } from './dto';
+import { GetUserQueryParamsWithFilter, UpdateUserDTO } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { Request } from 'express';
@@ -31,7 +31,7 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'List all users. Admin Only' })
-  getAllUser(@Query() query: GetUserQueryParams) {
+  getAllUser(@Query() query: GetUserQueryParamsWithFilter) {
     return this.userService.getUserList(query);
   }
 

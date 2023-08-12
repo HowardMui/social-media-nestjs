@@ -1,6 +1,6 @@
 import { PostResponse } from 'src/post/dto';
-import { RootQueryParams } from 'src/types';
+import { PaginationQueryParams } from 'src/types';
 
-export class GetMeLikedQueryParam extends RootQueryParams {}
+export class GetMeLikedQueryParam extends PaginationQueryParams {}
 
 export class GetMeLikedResponse extends PostResponse {}

@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsPositive, MaxLength } from 'class-validator';
-import { QueryParams } from 'src/types';
+import { QueryParamsWithFilter } from 'src/types';
 
-export class GetAllPostCommentParams extends QueryParams {}
+export class GetAllPostCommentParams extends QueryParamsWithFilter {}
 
 export class CreateCommentDTO {
   @ApiProperty({ default: null, required: false })

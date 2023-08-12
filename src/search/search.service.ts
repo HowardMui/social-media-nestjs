@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { GetSearchQueryParams } from './dto/search.dto';
+import { GetSearchQueryParamsWithFilter } from './dto/search.dto';
 import { SearchType } from 'src/types';
 
 @Injectable()
 export class SearchService {
   constructor(private prisma: PrismaSrcService) {}
 
-  async searchFn(query: GetSearchQueryParams) {
+  async searchFn(query: GetSearchQueryParamsWithFilter) {
     try {
       const { limit, offset, keyword, type } = query;
 

@@ -8,9 +8,9 @@ import {
   IsInt,
   MaxLength,
 } from 'class-validator';
-import { QueryParams } from 'src/types';
+import { QueryParamsWithFilter } from 'src/types';
 
-export class GetAllTagQueryParams extends QueryParams {}
+export class GetAllTagQueryParamsWithFilter extends QueryParamsWithFilter {}
 
 export class CreateOneTagDTO {
   @ApiProperty()

@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { CreatePostDTO, GetPostQueryParams } from './dto';
-import { returnAscOrDescInQueryParams } from 'src/helper';
+import { CreatePostDTO, GetPostQueryParamsWithFilter } from './dto';
+import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { Tag } from '@prisma/client';
 
 @Injectable()
@@ -15,12 +15,14 @@ export class PostService {
 
   // * Basic CRUD ------------------------------------------------------------------------------------
 
-  async getAllPostLists(query: GetPostQueryParams) {
+  async getAllPostLists(query: GetPostQueryParamsWithFilter) {
     const { limit, offset, asc, desc, userId } = query;
 
     try {
       const findPosts = await this.prisma.post.findMany({
-        orderBy: returnAscOrDescInQueryParams(asc, desc) || { postId: 'desc' },
+        orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
+          postId: 'desc',
+        },
         skip: offset,
         take: limit,
         where: {

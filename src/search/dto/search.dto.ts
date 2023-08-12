@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEnum, IsString } from 'class-validator';
-import { RootQueryParams, SearchType } from 'src/types';
+import { PaginationQueryParams, SearchType } from 'src/types';
 
-export class GetSearchQueryParams extends RootQueryParams {
+export class GetSearchQueryParamsWithFilter extends PaginationQueryParams {
   @ApiProperty({ required: false })
   @Transform(({ value }) => value.toString())
   @IsString()

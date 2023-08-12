@@ -1,7 +1,7 @@
 import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { CreateCommentDTO, GetAllPostCommentParams } from './dto';
-import { returnAscOrDescInQueryParams } from 'src/helper';
+import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 
 @Injectable()
 export class CommentService {
@@ -22,7 +22,7 @@ export class CommentService {
             },
           },
         },
-        orderBy: returnAscOrDescInQueryParams(asc, desc) || {
+        orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
           commentId: 'desc',
         },
         skip: offset,

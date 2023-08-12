@@ -17,7 +17,11 @@ import { PostService } from './post.service';
 import { Request } from 'express';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
-import { CreatePostDTO, GetPostQueryParams, PostResponse } from './dto';
+import {
+  CreatePostDTO,
+  GetPostQueryParamsWithFilter,
+  PostResponse,
+} from './dto';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -34,7 +38,7 @@ export class PostController {
   @Get('')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'List All Post' })
-  getAllPosts(@Query() query: GetPostQueryParams) {
+  getAllPosts(@Query() query: GetPostQueryParamsWithFilter) {
     return this.postService.getAllPostLists(query);
   }
 

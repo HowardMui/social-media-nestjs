@@ -6,7 +6,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { QueryParams } from 'src/types';
+import { QueryParamsWithFilter } from 'src/types';
 import { TimeStamp } from 'src/types';
 
 export class UserProfileAuthDto {
@@ -56,7 +56,7 @@ export class UpdateUserProfileDTO {
   description?: string;
 }
 
-export class GetOneUserPost extends QueryParams {}
+export class GetOneUserPost extends QueryParamsWithFilter {}
 
 export class UserProfileResponse extends TimeStamp {
   userId: number;

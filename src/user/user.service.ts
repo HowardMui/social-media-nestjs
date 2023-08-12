@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaSrcService } from '../prisma-src/prisma-src.service';
-import { GetUserQueryParams, UpdateUserDTO } from './dto';
+import { GetUserQueryParamsWithFilter, UpdateUserDTO } from './dto';
 
 @Injectable()
 export class UserService {
@@ -8,7 +8,7 @@ export class UserService {
 
   // User CRUD ------------------------------------------------------------------------------------------------
 
-  async getUserList(query: GetUserQueryParams) {
+  async getUserList(query: GetUserQueryParamsWithFilter) {
     const { limit, offset, asc, desc } = query;
 
     try {

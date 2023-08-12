@@ -9,9 +9,9 @@ import {
   MaxLength,
 } from 'class-validator';
 import { UserProfileResponse } from 'src/me/dto';
-import { QueryParams, TimeStamp } from 'src/types';
+import { QueryParamsWithFilter, TimeStamp } from 'src/types';
 
-export class GetPostQueryParams extends QueryParams {
+export class GetPostQueryParamsWithFilter extends QueryParamsWithFilter {
   @Transform(({ value }) => parseInt(value))
   @ApiPropertyOptional()
   @IsOptional()

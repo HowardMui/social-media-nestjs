@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
-  GetRecommendationQueryParams,
+  GetRecommendationQueryParamsWithFilter,
   RecommendationPostResponse,
 } from './dto';
 import { RecommendationType } from 'src/types';
@@ -10,7 +10,7 @@ import { RecommendationType } from 'src/types';
 export class RecommendationService {
   constructor(private prisma: PrismaSrcService) {}
 
-  async getRecommendationList(query: GetRecommendationQueryParams) {
+  async getRecommendationList(query: GetRecommendationQueryParamsWithFilter) {
     const { limit, offset, type } = query;
 
     try {
@@ -121,7 +121,7 @@ export class RecommendationService {
           });
       }
       // return await this.prisma.post.findMany({
-      //   orderBy: returnAscOrDescInQueryParams(asc, desc) || {
+      //   orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
       //     numOfUserLikes: 'desc',
       //   },
       //   skip: limit,

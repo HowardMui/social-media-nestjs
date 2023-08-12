@@ -1,4 +1,7 @@
-export const returnAscOrDescInQueryParams = (asc: string, desc: string) => {
+export const returnAscOrDescInQueryParamsWithFilter = (
+  asc: string,
+  desc: string,
+) => {
   if (!asc && !desc) {
     return undefined;
   }

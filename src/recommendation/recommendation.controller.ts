@@ -5,7 +5,7 @@ import { Request } from 'express';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import {
-  GetRecommendationQueryParams,
+  GetRecommendationQueryParamsWithFilter,
   RecommendationPostResponse,
 } from './dto';
 import { RecommendationService } from './recommendation.service';
@@ -24,7 +24,7 @@ export class RecommendationController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
   getRecommendationList(
-    @Query() query: GetRecommendationQueryParams,
+    @Query() query: GetRecommendationQueryParamsWithFilter,
     @Req() req: Request,
   ) {
     return this.recommendationService.getRecommendationList(query);
