@@ -7,7 +7,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { QueryParamsWithFilter } from 'src/types';
-import { TimeStamp } from 'src/types';
+import { UserProfileResponse } from 'src/user/dto';
 
 export class UserProfileAuthDto {
   @ApiProperty()
@@ -57,18 +57,6 @@ export class UpdateUserProfileDTO {
 }
 
 export class GetOneUserPost extends QueryParamsWithFilter {}
-
-export class UserProfileResponse extends TimeStamp {
-  userId: number;
-  firstName: string;
-  LastName: string;
-  email: string;
-  userName: string;
-  image: string;
-  bio: string;
-  description: string;
-  isVerified: boolean;
-}
 
 export class MeProfileResponse extends UserProfileResponse {
   followersCount: number;

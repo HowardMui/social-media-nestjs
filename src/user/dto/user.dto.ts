@@ -1,4 +1,4 @@
-import { QueryParamsWithFilter } from 'src/types';
+import { QueryParamsWithFilter, TimeStamp } from 'src/types';
 import { IsOptional, IsString, Max } from 'class-validator';
 
 export class GetUserQueryParamsWithFilter extends QueryParamsWithFilter {}
@@ -26,4 +26,16 @@ export class UpdateUserDTO {
   @IsString()
   @Max(200, { message: 'Maximum 200 chars' })
   description?;
+}
+
+export class UserProfileResponse extends TimeStamp {
+  userId: number;
+  firstName: string;
+  LastName: string;
+  email: string;
+  userName: string;
+  image: string;
+  bio: string;
+  description: string;
+  isVerified: boolean;
 }
