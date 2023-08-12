@@ -8,8 +8,9 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { UserProfileResponse } from 'src/me/dto';
+
 import { QueryParamsWithFilter, TimeStamp } from 'src/types';
+import { UserProfileResponse } from 'src/user/dto';
 
 export class GetPostQueryParamsWithFilter extends QueryParamsWithFilter {
   @Transform(({ value }) => parseInt(value))
@@ -49,6 +50,7 @@ export class PostResponse extends TimeStamp {
   // bookmarkedByUser;
   // @ApiProperty()
 
+  tags: string[];
   likedCount: number;
   commentCount: number;
   bookmarkedCount: number;
