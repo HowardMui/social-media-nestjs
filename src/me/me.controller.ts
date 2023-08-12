@@ -20,7 +20,6 @@ import { MeService } from './me.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import {
-  GetOneUserPost,
   GetMeBookmarkedPost,
   UpdateUserProfileDTO,
   UserProfileAuthDto,
@@ -32,6 +31,8 @@ import {
   GetMeFollowingQueryParam,
   GetMeFollowersQueryParam,
   MeProfileResponse,
+  GetMePostResponse,
+  GetMePostQuery,
 } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
@@ -135,10 +136,11 @@ export class MeController {
 
   // * Find all current user post ------------------------------------------------------------------------------------
   @Get('posts')
+  @ApiOkResponsePaginated(GetMePostResponse)
   @ApiOperation({ summary: 'List all post and rePosts. App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getAllMePost(@Query() query: GetOneUserPost, @Req() req: Request) {
+  getAllMePost(@Query() query: GetMePostQuery, @Req() req: Request) {
     return this.userProfileService.getAllMePost(query, req.user['userId']);
   }
 }
