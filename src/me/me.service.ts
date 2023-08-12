@@ -422,22 +422,101 @@ export class MeService {
       // return _.orderBy(transformedPosts, ['createdAt'], ['desc']);
 
       // TODO raw SQL
-      // const findUserPost = await this.prisma.$queryRaw`
-      //  SELECT *
-      //   FROM "User" AS u
-      //   LEFT OUTER JOIN "user_rePost_posts" ON u."userId" = "user_rePost_posts"."userId"
-      //   LEFT JOIN "Post" ON "user_rePost_posts"."postId" = "Post"."postId"
-      //   WHERE u."userId" = ${userId}
-      // `;
-      const findUserPost = await this.prisma.$queryRaw`
-     SELECT "User".*, "Post".*, "user_rePost_posts".*
-  FROM "User"
-  LEFT JOIN "Post" ON "User"."userId" = "Post"."userId"
-  LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
-  WHERE "User"."userId" = ${userId}
-      `;
-
-      return findUserPost;
+      // * UNION ALl (Need)
+      const findAllUserRePost = await this.prisma.$queryRaw`
+       SELECT "Post".*, pt."tags",
+          COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
+          COALESCE(lc.likesCount::integer, 0) AS "likesCount",
+          COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
+        FROM "User"
+        LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
+        LEFT JOIN "Post" ON "Post"."postId" = "user_rePost_posts"."postId"
+        LEFT JOIN (
+          SELECT "Post"."postId", 
+          CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG(DISTINCT jsonb_build_object('tagId', "Tag"."tagId", 'tagName', "Tag"."tagName"))
+            ELSE '[]' END AS "tags"
+          FROM "Post"
+        LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
+        LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
+          GROUP BY "Post"."postId"
+         ) pt ON pt."postId" = "Post"."postId"
+        LEFT JOIN (
+          SELECT
+            "postId",
+            COUNT(*) AS commentsCount
+          FROM
+            "Comment"
+          GROUP BY
+            "postId"
+          ) pc ON pc."postId" = "Post"."postId"
+        LEFT JOIN (
+          SELECT
+            "postId",
+            COUNT(*) AS likesCount
+          FROM
+            "user_liked_posts"
+          GROUP BY
+            "postId"
+          ) lc ON lc."postId" = "Post"."postId"
+        LEFT JOIN (
+          SELECT
+            "postId",
+            COUNT(*) AS rePostsCount
+          FROM
+            "user_rePost_posts"
+          GROUP BY
+            "postId"
+          ) rc ON rc."postId" = "Post"."postId"
+        WHERE "User"."userId" = ${userId}
+        UNION ALL
+      SELECT "Post".*, pt."tags",
+          COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
+          COALESCE(lc.likesCount::integer, 0) AS "likesCount",
+          COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
+        FROM "User"
+        LEFT JOIN "Post" ON "Post"."userId" = "User"."userId"
+        LEFT JOIN (
+          SELECT "Post"."postId", 
+          CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG(DISTINCT jsonb_build_object('tagId', "Tag"."tagId", 'tagName', "Tag"."tagName"))
+            ELSE '[]' END AS "tags"
+          FROM "Post"
+          LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
+          LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
+          GROUP BY "Post"."postId"
+         ) pt ON pt."postId" = "Post"."postId"
+         LEFT JOIN (
+            SELECT
+              "postId",
+              COUNT(*) AS commentsCount
+            FROM
+              "Comment"
+            GROUP BY
+              "postId"
+            ) pc ON pc."postId" = "Post"."postId"
+          LEFT JOIN (
+          SELECT
+            "postId",
+            COUNT(*) AS likesCount
+          FROM
+            "user_liked_posts"
+          GROUP BY
+            "postId"
+          ) lc ON lc."postId" = "Post"."postId"
+        LEFT JOIN (
+          SELECT
+            "postId",
+            COUNT(*) AS rePostsCount
+          FROM
+            "user_rePost_posts"
+          GROUP BY
+            "postId"
+          ) rc ON rc."postId" = "Post"."postId"
+        WHERE "User"."userId" = ${userId}
+        ORDER BY "createdAt" DESC
+        LIMIT ${limit || 20}
+        OFFSET ${offset || 0}
+        `;
+      return findAllUserRePost;
 
       // * origin data list
 
@@ -467,7 +546,7 @@ export class MeService {
       // });
 
       // return findUser;
-      // return findUserWithRePost;
+      // // return findUserWithRePost;
 
       // const sortPost = await this.prisma.post.findMany({
       //   where: {
