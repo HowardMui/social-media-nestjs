@@ -13,12 +13,19 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { GetUserQueryParamsWithFilter, UpdateUserDTO } from './dto';
+import {
+  GetOneUserResponse,
+  GetUserListQueryParams,
+  GetUserListResponse,
+} from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { Request } from 'express';
+import { UpdateUserDTO } from './dto/update-user.dto';
+import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
+import { GetOneUserPostResponse, GetUserPostQuery } from './dto/user-post.dto';
 
 @ApiTags('user')
 @Controller('users')
@@ -31,15 +38,36 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'List all users. Admin Only' })
-  getAllUser(@Query() query: GetUserQueryParamsWithFilter) {
+  @ApiOkResponsePaginated(GetUserListResponse)
+  getAllUser(@Query() query: GetUserListQueryParams) {
     return this.userService.getUserList(query);
   }
 
   @Get(':userId')
   @UseGuards(AuthGuard('jwt'))
-  @ApiOperation({ summary: 'Get one users.' })
+  @ApiOperation({ summary: 'Get one user.' })
+  @ApiOkResponse({ type: GetOneUserResponse })
   getOneUser(@Param('userId', new ParseIntPipe()) userId: number) {
     return this.userService.getOneUser(userId);
+  }
+
+  @Get(':userId/post')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get one user post post details.' })
+  // * for multiple type with different enum
+  // @ApiOkResponse({ type: GetOneUserResponse })
+  // @ApiExtraModels(GetOneUserPostResponse, GetOneUserLikedPostResponse)
+  // @ApiOkResponse({
+  //   schema: {
+  //     anyOf: refs(GetOneUserPostResponse, GetOneUserLikedPostResponse),
+  //   },
+  // })
+  @ApiOkResponsePaginated(GetOneUserPostResponse)
+  getOneUserPostDetail(
+    @Param('userId', new ParseIntPipe()) userId: number,
+    @Query() query: GetUserPostQuery,
+  ) {
+    return this.userService.getOneUserPostDetail(userId, query);
   }
 
   @Patch(':userId')
