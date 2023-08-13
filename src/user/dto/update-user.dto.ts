@@ -13,14 +13,14 @@ export class UpdateUserDTO {
 
   @IsOptional()
   @IsString()
-  image?;
+  image?: string;
 
   @IsOptional()
   @IsString()
-  bio?;
+  bio?: string;
 
   @IsOptional()
   @IsString()
   @Max(200, { message: 'Maximum 200 chars' })
-  description?;
+  description?: string;
 }
