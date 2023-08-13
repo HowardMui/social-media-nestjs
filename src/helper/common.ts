@@ -13,6 +13,8 @@ export const returnAscOrDescInQueryParamsWithFilter = (
     commentCount: 'comments',
     bookmarkedCount: 'bookmarkedByUser',
     rePostedCount: 'rePostedByUser',
+    followersCount: 'followers',
+    followingCount: 'following',
   };
 
   if (asc) {
