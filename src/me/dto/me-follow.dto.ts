@@ -1,9 +1,9 @@
 import { PaginationQueryParams } from 'src/types';
-import { UserProfileResponse } from 'src/user/dto';
+import { UserResponse } from 'src/user/dto';
 
 // * followers
 
-export class GetMeFollowersResponse extends UserProfileResponse {
+export class GetMeFollowersResponse extends UserResponse {
   isFollowing: boolean;
 }
 
@@ -11,7 +11,7 @@ export class GetMeFollowersQueryParams extends PaginationQueryParams {}
 
 // * following
 
-export class GetMeFollowingResponse extends UserProfileResponse {
+export class GetMeFollowingResponse extends UserResponse {
   isFollowing: boolean;
 }
 

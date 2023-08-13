@@ -6,8 +6,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { QueryParamsWithFilter } from 'src/types';
-import { UserProfileResponse } from 'src/user/dto';
+import { UserResponse } from 'src/user/dto';
 
 export class UserProfileAuthDto {
   @ApiProperty()
@@ -56,9 +55,7 @@ export class UpdateUserProfileDTO {
   description?: string;
 }
 
-export class GetOneUserPost extends QueryParamsWithFilter {}
-
-export class MeProfileResponse extends UserProfileResponse {
+export class MeProfileResponse extends UserResponse {
   followersCount: number;
   followingCount: number;
 }

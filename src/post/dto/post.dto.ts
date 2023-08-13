@@ -10,7 +10,7 @@ import {
 } from 'class-validator';
 
 import { QueryParamsWithFilter, TimeStamp } from 'src/types';
-import { UserProfileResponse } from 'src/user/dto';
+import { UserResponse } from 'src/user/dto';
 
 export class GetPostQueryParamsWithFilter extends QueryParamsWithFilter {
   @Transform(({ value }) => parseInt(value))
@@ -36,7 +36,7 @@ export class PostResponse extends TimeStamp {
 
   // @ApiProperty()
   userId: number;
-  user: UserProfileResponse;
+  user: UserResponse;
   // user;
   // @ApiProperty()
   // numOfUserRePost: number;
