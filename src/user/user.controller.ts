@@ -13,7 +13,12 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import {
   GetOneUserResponse,
@@ -74,6 +79,7 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Update one user. Admin Only' })
+  @ApiOkResponse({ type: GetOneUserResponse })
   updateOneUser(@Param('userId') userId: number, @Body() dto: UpdateUserDTO) {
     return this.updateOneUser(userId, dto);
   }
@@ -92,6 +98,10 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
   @ApiOperation({ summary: 'Follow one user. User Only' })
+  @ApiResponse({
+    status: 201,
+    description: 'Followed user',
+  })
   followOneUser(
     @Param('userId', new ParseIntPipe()) userId: number,
     @Req() req: Request,
@@ -99,10 +109,14 @@ export class UserController {
     return this.userService.followOneUser(userId, req.user['userId']);
   }
 
-  @Post(':userId/unfollow')
+  @Delete(':userId/unfollow')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
   @ApiOperation({ summary: 'UnFollow one user. User Only' })
+  @ApiResponse({
+    status: 201,
+    description: 'UnFollowed user',
+  })
   unFollowOneUser(
     @Param('userId', new ParseIntPipe()) userId: number,
     @Req() req: Request,

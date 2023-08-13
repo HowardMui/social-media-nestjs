@@ -10,7 +10,7 @@ import { PostResponse } from 'src/post/dto';
 export class UserService {
   constructor(private prisma: PrismaSrcService) {}
 
-  // User CRUD ------------------------------------------------------------------------------------------------
+  // * User CRUD ------------------------------------------------------------------------------------------------
 
   async getUserList(query: GetUserListQueryParams) {
     const { limit, offset, asc, desc } = query;
@@ -58,14 +58,26 @@ export class UserService {
           userId,
         },
         include: {
-          followers: true,
-          following: true,
+          _count: {
+            select: {
+              followers: true,
+              following: true,
+            },
+          },
         },
       });
       if (!findOneUser) {
         return new NotFoundException();
       }
-      return findOneUser;
+
+      const { _count, ...user } = findOneUser;
+
+      const transformedUser = {
+        followingCount: _count.following,
+        followersCount: _count.followers,
+      };
+
+      return { ...user, ...transformedUser };
     } catch (err) {
       console.log(err);
     }
@@ -256,11 +268,11 @@ export class UserService {
     }
   }
 
-  // Follow user action ---------------------------------------------------------------------------------------------------
+  // * Follow user action ---------------------------------------------------------------------------------------------------
 
   async followOneUser(wannaFollowId: number, currentUserId: number) {
     try {
-      const wannaToFollowUser = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: {
           userId: wannaFollowId,
         },
@@ -272,7 +284,7 @@ export class UserService {
           },
         },
       });
-      return wannaToFollowUser;
+      return 'Followed user';
     } catch (err) {
       console.log(err);
     }
@@ -280,7 +292,7 @@ export class UserService {
 
   async unFollowOneUser(wannaUnFollowId: number, currentUserId: number) {
     try {
-      const wannaToUnFollowUser = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: {
           userId: wannaUnFollowId,
         },
@@ -292,7 +304,7 @@ export class UserService {
           },
         },
       });
-      return wannaToUnFollowUser;
+      return 'UnFollowed user';
     } catch (err) {
       console.log(err);
     }
