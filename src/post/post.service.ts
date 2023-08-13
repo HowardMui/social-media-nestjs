@@ -42,8 +42,9 @@ export class PostService {
         },
       });
 
-      const transformedPosts = findPosts.map(({ _count, ...post }) => ({
+      const transformedPosts = findPosts.map(({ _count, tags, ...post }) => ({
         ...post,
+        tags: tags.map((t) => t.tagName),
         likedCount: _count.likedByUser,
         commentCount: _count.comments,
         bookmarkedCount: _count.bookmarkedByUser,
@@ -105,8 +106,9 @@ export class PostService {
       if (!findAPost) {
         return new NotFoundException('Post do not exist');
       }
-      const { _count, ...rest } = findAPost;
+      const { _count, tags, ...rest } = findAPost;
       const transformedPosts = {
+        tags: tags.map((t) => t.tagName),
         likedCount: _count.likedByUser,
         commentCount: _count.comments,
         bookmarkedCount: _count.bookmarkedByUser,
