@@ -7,9 +7,9 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
-import { AdminAuthDto, AdminSigninDto } from './dto';
+import { AdminSignInDTO, AdminSignUpDTO, GetAdminMeResponse } from './dto';
 import { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
@@ -25,7 +25,7 @@ export class AdminController {
   @Post('signIn')
   @ApiOperation({ summary: 'Admin Password Sign In' })
   adminSignin(
-    @Body() dto: AdminSigninDto,
+    @Body() dto: AdminSignInDTO,
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.adminService.adminSignin(dto, res);
@@ -33,7 +33,7 @@ export class AdminController {
 
   @Post('signUp')
   @ApiOperation({ summary: 'Admin Password Sign up' })
-  signup(@Body() dto: AdminAuthDto): any {
+  signup(@Body() dto: AdminSignUpDTO): any {
     return this.adminService.adminSignup(dto);
   }
 
@@ -46,6 +46,7 @@ export class AdminController {
   // Admin Action ------------------------------------------------------------------------------------
 
   @Get('')
+  @ApiOkResponse({ type: GetAdminMeResponse })
   @ApiOperation({ summary: 'Get Current Admin Profile. Admin Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.Admin)

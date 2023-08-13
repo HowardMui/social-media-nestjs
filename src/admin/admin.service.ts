@@ -1,10 +1,10 @@
 import { ForbiddenException, Get, Injectable } from '@nestjs/common';
-import { AdminAuthDto, AdminSigninDto } from './dto';
 import * as argon from 'argon2';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
+import { AdminSignInDTO, AdminSignUpDTO } from './dto';
 
 @Injectable()
 export class AdminService {
@@ -14,7 +14,7 @@ export class AdminService {
     private config: ConfigService,
   ) {}
 
-  async adminSignup(dto: AdminAuthDto) {
+  async adminSignup(dto: AdminSignUpDTO) {
     const { displayName, loginName, email, password } = dto;
     try {
       // Generate hash password
@@ -51,7 +51,7 @@ export class AdminService {
     }
   }
 
-  async adminSignin(dto: AdminSigninDto, res: Response) {
+  async adminSignin(dto: AdminSignInDTO, res: Response) {
     const { email, password } = dto;
     try {
       const findAdmin = await this.prisma.admin.findUnique({
