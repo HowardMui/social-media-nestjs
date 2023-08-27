@@ -64,12 +64,18 @@ export class AdminService {
       }
 
       //Compare hash password
-      const passwordMatch = await argon.verify(
-        findAdmin.AdminAuth[0].hash,
-        password,
-      );
-      if (!passwordMatch) {
-        return new ForbiddenException('Error in email or password');
+      if (findAdmin.AdminAuth.length > 0) {
+        const passwordMatch = await argon.verify(
+          findAdmin.AdminAuth[0].hash,
+          password,
+        );
+        if (!passwordMatch) {
+          return new ForbiddenException('Error in email or password');
+        }
+      } else {
+        return new ForbiddenException(
+          'Some issue with this account.  Please contact Admin.',
+        );
       }
 
       res

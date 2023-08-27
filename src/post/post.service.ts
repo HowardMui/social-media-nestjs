@@ -106,7 +106,9 @@ export class PostService {
       if (!findAPost) {
         return new NotFoundException('Post do not exist');
       }
-      const { _count, tags, ...rest } = findAPost;
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _count, tags, comments, ...rest } = findAPost;
       const transformedPosts = {
         tags: tags.map((t) => t.tagName),
         likedCount: _count.likedByUser,
