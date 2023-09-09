@@ -1,13 +1,13 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
-  UpdateUserProfileDTO,
-  UserProfileAuthDto,
   GetMeLikedQueryParams,
   GetMeFollowingQueryParams,
   GetMeFollowersQueryParams,
   GetMePostQueryParams,
   GetMeBookmarkedQueryParams,
+  UserSignInDTO,
+  UserSignUpDTO,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
@@ -15,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as _ from 'lodash';
 import { PostResponse } from 'src/post/dto';
+import { UpdateMeProfileDTO } from './dto/me-update-profile.dto';
 
 @Injectable()
 export class MeService {
@@ -26,7 +27,7 @@ export class MeService {
 
   // * Auth ------------------------------------------------------------------------------------
 
-  async userSignIn(dto: UserProfileAuthDto, res: Response) {
+  async userSignIn(dto: UserSignInDTO, res: Response) {
     const { email, password } = dto;
 
     try {
@@ -37,6 +38,8 @@ export class MeService {
 
       if (!findUser) {
         return new ForbiddenException('Cannot find user');
+      } else if (!findUser.UserAuths.length) {
+        return new ForbiddenException('Invalid user.  Please find Admin');
       }
 
       //Compare hash password
@@ -65,7 +68,7 @@ export class MeService {
     }
   }
 
-  async userSignUp(dto: UserProfileAuthDto) {
+  async userSignUp(dto: UserSignUpDTO) {
     const { email, password, userName } = dto;
 
     try {
@@ -161,7 +164,7 @@ export class MeService {
     }
   }
 
-  async updateMe(req: Request, dto: UpdateUserProfileDTO) {
+  async updateMe(req: Request, dto: UpdateMeProfileDTO) {
     try {
       const testUpdate = await this.prisma.user.update({
         where: {
@@ -169,7 +172,6 @@ export class MeService {
         },
         data: dto,
       });
-      console.log(testUpdate);
       return testUpdate;
     } catch (err) {
       console.log(err);
