@@ -19,24 +19,16 @@ export class UserService {
       const [totalUsers, userList] = await this.prisma.$transaction([
         this.prisma.user.count({
           where: {
-            OR: [
-              {
-                userName: {
-                  contains: userName ? userName : undefined,
-                },
-              },
-            ],
+            userName: {
+              contains: userName ? userName : undefined,
+            },
           },
         }),
         this.prisma.user.findMany({
           where: {
-            OR: [
-              {
-                userName: {
-                  contains: userName ? userName : undefined,
-                },
-              },
-            ],
+            userName: {
+              contains: userName ? userName : undefined,
+            },
           },
           orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
             userId: 'desc',
