@@ -12,35 +12,45 @@ export class TagService {
 
   async getAllTagList(query: GetAllTagQueryParamsWithFilter) {
     const { limit, offset, tagName } = query;
+    console.log(tagName);
 
     try {
-      const findTagList = await this.prisma.tag.findMany({
-        where: tagName
-          ? {
-              OR: [
-                {
-                  tagName: {
-                    contains: tagName,
-                  },
-                },
-              ],
-            }
-          : undefined,
-        include: {
-          _count: {
-            select: {
-              posts: true,
+      const [totalTags, tagList] = await this.prisma.$transaction([
+        this.prisma.tag.count({
+          where: {
+            tagName: {
+              contains: tagName ? tagName : undefined,
             },
           },
-        },
-        orderBy: { tagId: 'desc' },
-        skip: offset || 0,
-        take: limit || 20,
-      });
+        }),
+        this.prisma.tag.findMany({
+          where: tagName
+            ? {
+                OR: [
+                  {
+                    tagName: {
+                      contains: tagName,
+                    },
+                  },
+                ],
+              }
+            : undefined,
+          include: {
+            _count: {
+              select: {
+                posts: true,
+              },
+            },
+          },
+          orderBy: { tagId: 'desc' },
+          skip: offset || 0,
+          take: limit || 20,
+        }),
+      ]);
 
       const formatListResult = {
-        count: findTagList.length,
-        rows: findTagList.map(({ _count, ...rest }) => {
+        count: totalTags,
+        rows: tagList.map(({ _count, ...rest }) => {
           return { ...rest, postCount: _count.posts };
         }),
         limit: limit ?? 0,
