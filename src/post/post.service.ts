@@ -16,31 +16,54 @@ export class PostService {
   // * Basic CRUD ------------------------------------------------------------------------------------
 
   async getAllPostLists(query: GetPostQueryParamsWithFilter) {
-    const { limit, offset, asc, desc, userId } = query;
+    const { limit, offset, asc, desc, userName } = query;
 
     try {
-      const findPosts = await this.prisma.post.findMany({
-        orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
-          postId: 'desc',
-        },
-        skip: offset,
-        take: limit,
-        where: {
-          userId: userId ? userId : undefined,
-        },
-        include: {
-          user: true,
-          tags: true,
-          _count: {
-            select: {
-              likedByUser: true,
-              comments: true,
-              bookmarkedByUser: true,
-              rePostedByUser: true,
+      const [totalPosts, findPosts] = await this.prisma.$transaction([
+        this.prisma.post.count({
+          where: {
+            OR: [
+              {
+                user: {
+                  userName: {
+                    contains: userName ? userName : undefined,
+                  },
+                },
+              },
+            ],
+          },
+        }),
+        this.prisma.post.findMany({
+          where: {
+            OR: [
+              {
+                user: {
+                  userName: {
+                    contains: userName ? userName : undefined,
+                  },
+                },
+              },
+            ],
+          },
+          orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
+            postId: 'desc',
+          },
+          skip: offset ?? 0,
+          take: limit ?? 20,
+          include: {
+            user: true,
+            tags: true,
+            _count: {
+              select: {
+                likedByUser: true,
+                comments: true,
+                bookmarkedByUser: true,
+                rePostedByUser: true,
+              },
             },
           },
-        },
-      });
+        }),
+      ]);
 
       const transformedPosts = findPosts.map(({ _count, tags, ...post }) => ({
         ...post,
@@ -52,7 +75,7 @@ export class PostService {
       }));
 
       const returnObject = {
-        count: findPosts.length,
+        count: totalPosts,
         rows: transformedPosts,
         limit,
         offset,

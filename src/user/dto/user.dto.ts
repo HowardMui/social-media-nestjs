@@ -1,6 +1,12 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional } from 'class-validator';
 import { QueryParamsWithFilter, TimeStamp } from 'src/types';
 
-export class GetUserListQueryParams extends QueryParamsWithFilter {}
+export class GetUserListQueryParams extends QueryParamsWithFilter {
+  @ApiProperty()
+  @IsOptional()
+  userName?: string;
+}
 
 export class UserResponse extends TimeStamp {
   userId: number;

@@ -13,24 +13,46 @@ export class UserService {
   // * User CRUD ------------------------------------------------------------------------------------------------
 
   async getUserList(query: GetUserListQueryParams) {
-    const { limit, offset, asc, desc } = query;
+    const { limit, offset, userName, asc, desc } = query;
 
     try {
-      const userList = await this.prisma.user.findMany({
-        orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
-          userId: 'desc',
-        },
-        skip: offset ?? 0,
-        take: limit ?? 20,
-        include: {
-          _count: {
-            select: {
-              followers: true,
-              following: true,
+      const [totalUsers, userList] = await this.prisma.$transaction([
+        this.prisma.user.count({
+          where: {
+            OR: [
+              {
+                userName: {
+                  contains: userName ? userName : undefined,
+                },
+              },
+            ],
+          },
+        }),
+        this.prisma.user.findMany({
+          where: {
+            OR: [
+              {
+                userName: {
+                  contains: userName ? userName : undefined,
+                },
+              },
+            ],
+          },
+          orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
+            userId: 'desc',
+          },
+          skip: offset ?? 0,
+          take: limit ?? 20,
+          include: {
+            _count: {
+              select: {
+                followers: true,
+                following: true,
+              },
             },
           },
-        },
-      });
+        }),
+      ]);
 
       const transformedUserList = userList.map(({ _count, ...user }) => ({
         ...user,
@@ -39,7 +61,7 @@ export class UserService {
       }));
 
       const returnObject = {
-        count: transformedUserList.length,
+        count: totalUsers,
         rows: transformedUserList,
         limit: limit ?? 20,
         offset: offset ?? 0,

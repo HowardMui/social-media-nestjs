@@ -1,6 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { User } from '@prisma/client';
-import { Transform } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsArray,
   IsNotEmpty,
@@ -13,10 +11,9 @@ import { QueryParamsWithFilter, TimeStamp } from 'src/types';
 import { UserResponse } from 'src/user/dto';
 
 export class GetPostQueryParamsWithFilter extends QueryParamsWithFilter {
-  @Transform(({ value }) => parseInt(value))
-  @ApiPropertyOptional()
+  @ApiProperty()
   @IsOptional()
-  userId?: number;
+  userName?: string;
 }
 
 export class PostResponse extends TimeStamp {
