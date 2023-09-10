@@ -10,28 +10,35 @@ export class CommentService {
   async getPostCommentList(postId: number, query: GetAllPostCommentParams) {
     const { limit, offset, asc, desc } = query;
     try {
-      const findComment = await this.prisma.comment.findMany({
-        where: {
-          postId,
-          parentCommentId: null,
-        },
-        include: {
-          comments: {
-            include: {
-              comments: true,
+      const [totalComment, commentList] = await this.prisma.$transaction([
+        this.prisma.comment.count({
+          where: {
+            postId,
+          },
+        }),
+        this.prisma.comment.findMany({
+          where: {
+            postId,
+            parentCommentId: null,
+          },
+          include: {
+            comments: {
+              include: {
+                comments: true,
+              },
             },
           },
-        },
-        orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
-          commentId: 'desc',
-        },
-        skip: offset,
-        take: limit,
-      });
+          orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
+            commentId: 'desc',
+          },
+          skip: offset,
+          take: limit,
+        }),
+      ]);
 
       return {
-        count: findComment.length,
-        rows: findComment,
+        count: totalComment,
+        rows: commentList,
         limit,
         offset,
       };

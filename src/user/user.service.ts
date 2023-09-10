@@ -102,11 +102,25 @@ export class UserService {
 
     try {
       switch (postType) {
+        // * Find user's post and rePosts
         case GetUserPostEnum.Posts:
         default:
           // TODO raw SQL
           // * UNION ALl
-          const findAllUserRePost: PostResponse[] = await this.prisma.$queryRaw`
+
+          const [totalPosts, totalRePosts, postAndRePostList] =
+            await this.prisma.$transaction([
+              this.prisma.post.count({
+                where: {
+                  userId,
+                },
+              }),
+              this.prisma.userRePost.count({
+                where: {
+                  userId,
+                },
+              }),
+              this.prisma.$queryRaw`
           SELECT "Post".*, pt."tags",
               COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
               COALESCE(lc.likesCount::integer, 0) AS "likesCount",
@@ -198,41 +212,52 @@ export class UserService {
             ORDER BY "createdAt" DESC
             LIMIT ${limit || 20}
             OFFSET ${offset || 0}
-            `;
+            `,
+            ]);
 
           const returnPostObject = {
-            count: findAllUserRePost.length,
-            rows: findAllUserRePost,
+            count: totalPosts + totalRePosts,
+            rows: postAndRePostList,
             limit,
             offset,
           };
           return returnPostObject;
+
+        // * Find user liked post
         case GetUserPostEnum.Likes:
-          const findLikedPost = await this.prisma.userLikedPost.findMany({
-            where: {
-              userId,
-            },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-            select: {
-              post: {
-                include: {
-                  user: true,
-                  tags: true,
-                  _count: {
-                    select: {
-                      likedByUser: true,
-                      comments: true,
-                      bookmarkedByUser: true,
-                      rePostedByUser: true,
+          const [likedPostCount, userLikedList] =
+            await this.prisma.$transaction([
+              this.prisma.userLikedPost.count({
+                where: {
+                  userId,
+                },
+              }),
+              this.prisma.userLikedPost.findMany({
+                where: {
+                  userId,
+                },
+                skip: offset ?? 0,
+                take: limit ?? 20,
+                select: {
+                  post: {
+                    include: {
+                      user: true,
+                      tags: true,
+                      _count: {
+                        select: {
+                          likedByUser: true,
+                          comments: true,
+                          bookmarkedByUser: true,
+                          rePostedByUser: true,
+                        },
+                      },
                     },
                   },
                 },
-              },
-            },
-          });
+              }),
+            ]);
 
-          const transformedPosts = findLikedPost.map(({ post }) => {
+          const transformedPosts = userLikedList.map(({ post }) => {
             const { _count, ...rest } = post;
             return {
               ...rest,
@@ -245,13 +270,17 @@ export class UserService {
           });
 
           const returnLikedPostObject = {
-            count: findLikedPost.length,
+            count: likedPostCount,
             rows: transformedPosts,
             limit: limit ?? 0,
             offset: offset ?? 20,
           };
 
           return returnLikedPostObject;
+
+        // * Find user replied post
+        case GetUserPostEnum.Replies:
+          return 'Not yet implemented';
       }
     } catch (err) {
       console.log(err);
