@@ -1,4 +1,9 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaSrcService } from '../prisma-src/prisma-src.service';
 import { GetUserListQueryParams } from './dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
@@ -315,6 +320,10 @@ export class UserService {
 
   async followOneUser(wannaFollowId: number, currentUserId: number) {
     try {
+      if (wannaFollowId === currentUserId) {
+        return new BadRequestException('Cannot follow yourself');
+      }
+
       await this.prisma.user.update({
         where: {
           userId: wannaFollowId,
@@ -330,11 +339,18 @@ export class UserService {
       return 'Followed user';
     } catch (err) {
       console.log(err);
+      if (err.code === 'P2016') {
+        throw new NotFoundException('User do not exist');
+      }
     }
   }
 
   async unFollowOneUser(wannaUnFollowId: number, currentUserId: number) {
     try {
+      if (wannaUnFollowId === currentUserId) {
+        return new BadRequestException('Cannot unfollow yourself');
+      }
+
       await this.prisma.user.update({
         where: {
           userId: wannaUnFollowId,
@@ -350,6 +366,9 @@ export class UserService {
       return 'UnFollowed user';
     } catch (err) {
       console.log(err);
+      if (err.code === 'P2025') {
+        throw new NotFoundException('User do not exist');
+      }
     }
   }
 }
