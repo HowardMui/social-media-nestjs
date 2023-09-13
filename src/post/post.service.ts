@@ -226,7 +226,11 @@ export class PostService {
       return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
-      if (err.code === 'P2025' || err.code === 'P2016') {
+      if (
+        err.code === 'P2003' ||
+        err.code === 'P2025' ||
+        err.code === 'P2016'
+      ) {
         throw new NotFoundException('Post do not exist');
       } else if (err.code === 'P2002') {
         throw new BadRequestException('Already liked by user');
