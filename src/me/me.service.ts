@@ -425,79 +425,7 @@ export class MeService {
     const { limit, offset } = query;
 
     try {
-      //* adjusted new data list
-      // const findUserWithRePost = await this.prisma.user.findMany({
-      //   where: {
-      //     userId,
-      //   },
-
-      //   select: {
-      //     // skip: offset ?? 0,
-      //     posts: {
-      //       include: {
-      //         user: true,
-      //         tags: true,
-      //         _count: {
-      //           select: {
-      //             likedByUser: true,
-      //             comments: true,
-      //             bookmarkedByUser: true,
-      //             rePostedByUser: true,
-      //           },
-      //         },
-      //       },
-      //       orderBy: {
-      //         postId: 'desc',
-      //       },
-      //       skip: offset ?? 0,
-      //       take: limit ?? 20,
-      //     },
-      //     rePosts: {
-      //       select: {
-      //         post: {
-      //           include: {
-      //             user: true,
-      //             tags: true,
-      //             _count: {
-      //               select: {
-      //                 likedByUser: true,
-      //                 comments: true,
-      //                 bookmarkedByUser: true,
-      //                 rePostedByUser: true,
-      //               },
-      //             },
-      //           },
-      //         },
-      //       },
-      //       orderBy: {
-      //         post: {
-      //           postId: 'desc',
-      //         },
-      //       },
-      //       skip: offset ?? 0,
-      //       take: limit ?? 20,
-      //     },
-      //   },
-      // });
-
-      // return findUserWithRePost;
-
-      // const transformedPosts = findUserWithRePost
-      //   .flatMap(({ posts, rePosts }) => [
-      //     ...posts,
-      //     ...rePosts.map((repost) => repost.post),
-      //   ])
-      //   .map(({ _count, ...post }) => ({
-      //     ...post,
-      //     likedCount: _count.likedByUser,
-      //     commentCount: _count.comments,
-      //     bookmarkedCount: _count.bookmarkedByUser,
-      //     rePostedCount: _count.rePostedByUser,
-      //   }));
-
-      // return _.orderBy(transformedPosts, ['createdAt'], ['desc']);
-      // TODO raw SQL
-      const testQuery = await this.prisma.$queryRaw<{count: number, rows:PostResponse[]}[]>`
+      const postsQuery = await this.prisma.$queryRaw<{count: number, rows:PostResponse[]}[]>`
         WITH "Posts" AS (
           SELECT "Post".*, pt."tags",
             COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
@@ -609,60 +537,13 @@ export class MeService {
         FROM "AggregatedPosts";
       `;
       const returnObject = {
-        count: testQuery[0].count,
-        rows: testQuery[0].rows,
+        count: postsQuery[0].count,
+        rows: postsQuery[0].rows,
         limit: limit ?? 20,
         offset: offset ?? 0,
       };
 
       return returnObject;
-
-      // * origin data list
-
-      // const findUser = await this.prisma.user.findUnique({
-      //   where: {
-      //     userId,
-      //   },
-      //   include: {
-      //     posts: {
-      //       orderBy: { createdAt: 'desc' },
-      //       skip: offset ?? 0,
-      //       take: limit ?? 20,
-      //     },
-      //     rePosts: {
-      //       select: {
-      //         post: true,
-      //       },
-      //       orderBy: {
-      //         post: {
-      //           createdAt: 'desc',
-      //         },
-      //       },
-      //       skip: offset ?? 0,
-      //       take: limit ?? 20,
-      //     },
-      //   },
-      // });
-
-      // return findUser;
-      // // return findUserWithRePost;
-
-      // const sortPost = await this.prisma.post.findMany({
-      //   where: {
-      //     OR: [
-      //       { userId },
-      //       {
-      //         postId: {
-      //           in: findUser.rePosts.map((repost) => repost.post.postId),
-      //         },
-      //       },
-      //     ],
-      //   },
-      //   orderBy: { createdAt: 'desc' },
-      //   skip: offset ?? 0,
-      //   take: limit ?? 20,
-      // });
-      // return sortPost;
     } catch (err) {
       console.log(err);
     }
