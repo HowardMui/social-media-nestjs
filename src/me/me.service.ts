@@ -530,7 +530,7 @@ export class MeService {
         ),
         -- // * reform the the data into rows and count (count form the Posts -> avoid involve into the pagination)
         "AggregatedPosts" AS (
-          SELECT json_agg("PaginatedPosts") AS rows, (SELECT COUNT(*) FROM "Posts")::integer AS "count"
+          SELECT json_agg("PaginatedPosts") AS "rows", (SELECT COUNT(*) FROM "Posts")::integer AS "count"
           FROM "PaginatedPosts"
         )
         SELECT "count", "rows"
