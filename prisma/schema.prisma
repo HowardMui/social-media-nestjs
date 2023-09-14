@@ -28,12 +28,12 @@ model User {
   isVerified Boolean @default(false)
   posts Post[] 
   rePosts UserRePost[]
-  UserAuths UserAuth[]
   likedPosts   UserLikedPost[]
+  bookmarkedPosts UserBookmark[] 
   comments       Comment[]
   followers User[] @relation(name: "Followers")
   following   User[]  @relation(name: "Followers")
-  bookmarkedPosts UserBookmark[] 
+  UserAuths UserAuth[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

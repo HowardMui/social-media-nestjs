@@ -15,53 +15,49 @@ export class RecommendationService {
     try {
       switch (type) {
         case RecommendationType.user:
-          return await this.prisma.user.findMany({
-            where: {},
-            orderBy: { userName: 'desc' },
-            skip: offset || 0,
-            take: limit || 20,
-            include: {
-              posts: true,
-            },
-          });
+          // * base on the given weights and sort by the total score
+          const recommentedUsers = await this.prisma.$queryRaw`
+          SELECT u.*,
+          (COALESCE(UserPost."postCount"::integer, 0) * 8)
+          + (COALESCE(UserRePost."rePostCount"::integer, 0) * 6)
+          + (COALESCE(UserLikedPost."likedPostCount"::integer, 0) * 4)
+          + (COALESCE(UserBookmarkedPost."bookmarkedPostCount"::integer, 0) * 2)
+          + (COALESCE(UserCommentedPost."commentedPostCount"::integer, 0) * 3) AS "score"
+           FROM "User" AS u
+          LEFT JOIN (
+            SELECT "userId", COUNT(*)::integer AS "postCount"
+              FROM "Post"
+              GROUP BY "userId"
+          ) AS UserPost ON UserPost."userId" = u."userId"
+          LEFT JOIN (
+            SELECT "userId", COUNT(*)::integer AS "rePostCount"
+              FROM "user_rePost_posts"
+              GROUP BY "userId"
+          ) AS UserRePost ON UserRePost."userId" = u."userId"
+          LEFT JOIN (
+            SELECT "userId", COUNT(*)::integer AS "likedPostCount"
+              FROM "user_liked_posts"
+              GROUP BY "userId"
+          ) AS UserLikedPost ON UserLikedPost."userId" = u."userId"
+          LEFT JOIN (
+            SELECT "userId", COUNT(*)::integer AS "bookmarkedPostCount"
+              FROM "user_bookmarked_posts"
+              GROUP BY "userId"
+          ) AS UserBookmarkedPost ON UserBookmarkedPost."userId" = u."userId"
+          LEFT JOIN (
+            SELECT "userId", COUNT(*)::integer AS "commentedPostCount"
+              FROM "Comment"
+              GROUP BY "userId"
+          ) AS UserCommentedPost ON UserCommentedPost."userId" = u."userId"
+          ORDER BY
+            "score" DESC
+            LIMIT ${limit || 20}
+            OFFSET ${offset || 0}
+        `;
+          return recommentedUsers;
+
         case RecommendationType.post:
         default:
-          // return await this.prisma.post.aggregate({
-          //   _max: {
-          //     numOfUserLikes: true,
-          //   },
-          //   where:{
-          //     numOfUserLikes: {
-
-          //     }
-          //   }
-
-          // });
-          // return await this.prisma.post.findMany({
-          //   where: {},
-          //   orderBy: [{ numOfUserRePost: 'desc' }, { numOfUserLikes: 'desc' }],
-          //   skip: offset || 0,
-          //   take: limit || 20,
-          //   // select:{
-          //   //   _count
-          //   // }
-          // });
-          // return await this.prisma.post.findMany({
-          //   orderBy: [{ numOfUserRePost: 'desc' }, { numOfUserLikes: 'desc' }],
-          //   skip: offset || 0,
-          //   take: limit || 20,
-          //   include: {
-          //     _count: {
-          //       select: {
-          //         likedByUser: true,
-          //         comments: true,
-          //         bookmarkedByUser: true,
-          //       },
-          //     },
-          //   },
-          // });
-          // const posts = await this.prisma
-          //   .$queryRaw`SELECT * FROM "user_liked_posts"`;
           const posts = await this.prisma.$queryRaw`
            SELECT
               p.*,
@@ -69,7 +65,9 @@ export class RecommendationService {
               COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
               COALESCE(lc.likesCount::integer, 0) AS "likesCount",
               COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount",
-              (COALESCE(pc.commentsCount::integer, 0) * 2) + (COALESCE(lc.likesCount::integer, 0) * 3) + (COALESCE(rc.rePostsCount::integer, 0) * 4) AS "score"
+              (COALESCE(pc.commentsCount::integer, 0) * 2) 
+              + (COALESCE(lc.likesCount::integer, 0) * 3) 
+              + (COALESCE(rc.rePostsCount::integer, 0) * 4) AS "score"
             FROM
               "Post" p
             LEFT JOIN (
@@ -102,30 +100,33 @@ export class RecommendationService {
             OFFSET ${offset || 0}
             `;
 
-          // return posts.map(({ score, ...post }) => post);
-          return posts;
+          const returnObject = {
+            rows: posts,
+            limit: limit ?? 20,
+            offset: offset ?? 0,
+          };
+
+          return returnObject;
         case RecommendationType.tag:
-          return await this.prisma.user.findMany({
-            where: {},
-            orderBy: { userName: 'desc' },
-            skip: offset || 0,
-            take: limit || 20,
-            include: {
-              posts: true,
-            },
-          });
+          const tagWeight = await this.prisma.$queryRaw`
+            SELECT t."tagName", t."tagId", COUNT(p."postId")::integer AS "postCount"
+            FROM "Tag" AS t
+            LEFT JOIN (
+              SELECT *
+              FROM "_PostTags"
+            ) AS pt ON pt."B" = t."tagId"
+            LEFT JOIN (
+              SELECT *
+              FROM "Post"
+            ) AS p ON p."postId" = pt."A"
+            GROUP BY t."tagName", t."tagId"
+            ORDER BY "postCount" DESC
+          `;
+
+          return tagWeight;
       }
-      // return await this.prisma.post.findMany({
-      //   orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
-      //     numOfUserLikes: 'desc',
-      //   },
-      //   skip: limit,
-      //   take: offset,
-      // });
     } catch (err) {
       console.log(err);
     }
   }
-
-  // async getRecommendationTagList() {}
 }
