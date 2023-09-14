@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Ip,
   Patch,
   Post,
   Query,
@@ -74,7 +75,9 @@ export class MeController {
   @ApiOperation({ summary: 'Get Current User Profile, App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getProfile(@Req() req: Request) {
+  getProfile(@Req() req: Request, @Ip() userIp:string) {
+    // console.log('ip',userIp)
+    // console.log('req ip', req.ip)
     return this.userProfileService.getCurrentUserProfile(req.user['userId']);
   }
 
