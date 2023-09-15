@@ -13,6 +13,7 @@ import { RecommendationModule } from './recommendation/recommendation.module';
 import { FileModule } from './file/file.module';
 import { TagModule } from './tag/tag.module';
 import { SearchModule } from './search/search.module';
+import { CronjobsModule } from './cronjobs/cronjobs.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SearchModule } from './search/search.module';
     FileModule,
     TagModule,
     SearchModule,
+    CronjobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
