@@ -150,11 +150,12 @@ export class PostService {
     const { tagName, ...postBody } = body;
 
     try {
-      let tempExistedTags: Tag[] = [];
+      let existedTags: Tag[] = [];
       let willBeCreatedTag: string[] = [];
 
+      // * Filter exist nor not-exist tag
       if (tagName && tagName.length > 0) {
-        tempExistedTags = await this.prisma.tag.findMany({
+        existedTags = await this.prisma.tag.findMany({
           where: {
             tagName: {
               in: tagName,
@@ -163,12 +164,11 @@ export class PostService {
         });
 
         willBeCreatedTag = tagName.filter(
-          (tag) =>
-            !tempExistedTags.some((existTag) => existTag.tagName === tag),
+          (tag) => !existedTags.some((existTag) => existTag.tagName === tag),
         );
       }
 
-      // Create a new post
+      // * Create a new post
       await this.prisma.post.create({
         data: {
           ...postBody,
@@ -176,7 +176,7 @@ export class PostService {
           tags:
             tagName && tagName.length > 0
               ? {
-                  connect: tempExistedTags.map((tag) => ({
+                  connect: existedTags.map((tag) => ({
                     tagName: tag.tagName,
                   })),
                   create: willBeCreatedTag.map((tag) => ({
