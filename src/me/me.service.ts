@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   GetMeLikedQueryParams,
@@ -16,6 +16,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as _ from 'lodash';
 import { PostResponse } from 'src/post/dto';
 import { UpdateMeProfileDTO } from './dto/me-update-profile.dto';
+import { formatDevice } from 'src/helper';
 
 @Injectable()
 export class MeService {
@@ -27,44 +28,64 @@ export class MeService {
 
   // * Auth ------------------------------------------------------------------------------------
 
-  async userSignIn(dto: UserSignInDTO, res: Response) {
+  async userSignIn(
+    dto: UserSignInDTO,
+    res: Response,
+    signInIpAddress: string,
+    req: Request,
+  ) {
     const { email, password } = dto;
-
+    const { client, device, os } = formatDevice(req);
     try {
-      const findUser = await this.prisma.user.findUnique({
-        where: { email },
-        include: { UserAuths: true },
-      });
+      await this.prisma.$transaction(async (tx) => {
+        // * 1. Find user
+        const findUser = await tx.user.findUnique({
+          where: { email },
+          include: { UserAuths: true },
+        });
 
-      if (!findUser) {
-        return new ForbiddenException('Cannot find user');
-      } else if (!findUser.UserAuths.length) {
-        return new ForbiddenException('Invalid user.  Please find Admin');
-      }
+        if (!findUser) {
+          return new ForbiddenException('Cannot find user');
+        } else if (!findUser.UserAuths.length) {
+          return new ForbiddenException('Invalid user.  Please find Admin');
+        }
 
-      //Compare hash password
-      const passwordMatch = await argon.verify(
-        findUser.UserAuths[0].hash,
-        password,
-      );
-      if (!passwordMatch) {
-        return new ForbiddenException('Error in email or password');
-      }
-
-      res
-        .status(200)
-        .cookie(
-          'token',
-          (await this.userSignToken(findUser.userId, findUser.email))
-            .access_token,
-          {
-            httpOnly: true,
-            sameSite: 'none',
-            secure: true,
-          },
+        // * 2. Compare hash password
+        const passwordMatch = await argon.verify(
+          findUser.UserAuths[0].hash,
+          password,
         );
+        if (!passwordMatch) {
+          return new ForbiddenException('Error in email or password');
+        }
+
+        // * 3. Add record to log table
+        await tx.logTable.create({
+          data: {
+            userId: findUser.userId,
+            userType: 'user',
+            ipAddress: signInIpAddress,
+            device: `${device.type}-${device.brand}-${os.name}-${os.version}-${client.type}-${client.name}-${client.version}`,
+          },
+        });
+
+        res
+          .status(200)
+          .cookie(
+            'token',
+            (await this.userSignToken(findUser.userId, findUser.email))
+              .access_token,
+            {
+              httpOnly: true,
+              sameSite: 'none',
+              secure: true,
+            },
+          );
+      });
+      return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
+      return err;
     }
   }
 
@@ -425,7 +446,7 @@ export class MeService {
     const { limit, offset } = query;
 
     try {
-      const postsQuery = await this.prisma.$queryRaw<{count: number, rows:PostResponse[]}[]>`
+      const postsQuery = await this.prisma.$queryRaw<{ count: number; rows: PostResponse[] }[]>`
         WITH "Posts" AS (
           SELECT "Post".*, pt."tags",
             COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",

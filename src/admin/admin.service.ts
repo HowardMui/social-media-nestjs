@@ -1,10 +1,11 @@
-import { ForbiddenException, Get, Injectable } from '@nestjs/common';
+import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
 import * as argon from 'argon2';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { AdminSignInDTO, AdminSignUpDTO } from './dto';
+import { formatDevice } from 'src/helper';
 
 @Injectable()
 export class AdminService {
@@ -51,53 +52,72 @@ export class AdminService {
     }
   }
 
-  async adminSignin(dto: AdminSignInDTO, res: Response) {
+  async adminSignIn(
+    dto: AdminSignInDTO,
+    res: Response,
+    signInIpAddress: string,
+    req: Request,
+  ) {
     const { email, password } = dto;
+    const { client, device, os } = formatDevice(req);
     try {
-      const findAdmin = await this.prisma.admin.findUnique({
-        where: { email },
-        include: { AdminAuth: true },
+      await this.prisma.$transaction(async (tx) => {
+        // * 1. Find admin
+        const findAdmin = await tx.admin.findUnique({
+          where: { email },
+          include: { AdminAuth: true },
+        });
+
+        if (!findAdmin) {
+          return new ForbiddenException('Cannot find Admin');
+        }
+
+        // * 2. Compare hash password
+        if (findAdmin.AdminAuth.length > 0) {
+          const passwordMatch = await argon.verify(
+            findAdmin.AdminAuth[0].hash,
+            password,
+          );
+          if (!passwordMatch) {
+            return new ForbiddenException('Error in email or password');
+          }
+        } else {
+          return new ForbiddenException(
+            'Some issue with this account.  Please contact Admin.',
+          );
+        }
+
+        // * 3. Add record to log table
+        await tx.logTable.create({
+          data: {
+            userId: findAdmin.adminId,
+            userType: 'admin',
+            ipAddress: signInIpAddress,
+            device: `${device.type}-${device.brand}-${os.name}-${os.version}-${client.type}-${client.name}-${client.version}`,
+          },
+        });
+
+        res
+          .status(200)
+          .cookie(
+            'token',
+            (await this.signAdminToken(findAdmin.adminId, findAdmin.email))
+              .access_token,
+            {
+              httpOnly: true,
+              sameSite: 'none',
+              secure: true,
+            },
+          );
       });
 
-      if (!findAdmin) {
-        return new ForbiddenException('Cannot find Admin');
-      }
-
-      //Compare hash password
-      if (findAdmin.AdminAuth.length > 0) {
-        const passwordMatch = await argon.verify(
-          findAdmin.AdminAuth[0].hash,
-          password,
-        );
-        if (!passwordMatch) {
-          return new ForbiddenException('Error in email or password');
-        }
-      } else {
-        return new ForbiddenException(
-          'Some issue with this account.  Please contact Admin.',
-        );
-      }
-
-      res
-        .status(200)
-        .cookie(
-          'token',
-          (await this.signAdminToken(findAdmin.adminId, findAdmin.email))
-            .access_token,
-          {
-            httpOnly: true,
-            sameSite: 'none',
-            secure: true,
-          },
-        );
+      return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
-
       if (err.code === 'P2002') {
-        throw new ForbiddenException('Email already exist');
+        return new ForbiddenException('Email already exist');
       }
-
-      throw err;
+      return err;
     }
   }
 
@@ -122,7 +142,7 @@ export class AdminService {
     };
   }
 
-  async adminlogout(res: Response) {
+  async adminLogout(res: Response) {
     res.clearCookie('token', {
       httpOnly: true,
       sameSite: 'none',

@@ -50,8 +50,13 @@ export class MeController {
   @ApiOkResponse({ status: 201, description: 'Login success' })
   @ApiForbiddenResponse()
   @ApiOperation({ summary: 'User Sign In' })
-  login(@Body() dto: UserSignInDTO, @Res({ passthrough: true }) res: Response) {
-    return this.userProfileService.userSignIn(dto, res);
+  login(
+    @Body() dto: UserSignInDTO,
+    @Res({ passthrough: true }) res: Response,
+    @Ip() signInIpAddress: string,
+    @Req() req: Request,
+  ) {
+    return this.userProfileService.userSignIn(dto, res, signInIpAddress, req);
   }
 
   @Post('signUp')
@@ -75,9 +80,7 @@ export class MeController {
   @ApiOperation({ summary: 'Get Current User Profile, App User Only' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
-  getProfile(@Req() req: Request, @Ip() userIp:string) {
-    // console.log('ip',userIp)
-    // console.log('req ip', req.ip)
+  getProfile(@Req() req: Request) {
     return this.userProfileService.getCurrentUserProfile(req.user['userId']);
   }
 

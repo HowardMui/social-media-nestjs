@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Ip,
   Post,
   Req,
   Res,
@@ -27,8 +28,10 @@ export class AdminController {
   adminSignin(
     @Body() dto: AdminSignInDTO,
     @Res({ passthrough: true }) res: Response,
+    @Ip() signInIpAddress: string,
+    @Req() req: Request,
   ) {
-    return this.adminService.adminSignin(dto, res);
+    return this.adminService.adminSignIn(dto, res, signInIpAddress, req);
   }
 
   @Post('signUp')
@@ -40,7 +43,7 @@ export class AdminController {
   @Post('logout')
   @ApiOperation({ summary: 'Admin me logout' })
   logout(@Res() res: Response) {
-    return this.adminService.adminlogout(res);
+    return this.adminService.adminLogout(res);
   }
 
   // Admin Action ------------------------------------------------------------------------------------
