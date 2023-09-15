@@ -90,7 +90,7 @@ export class AdminService {
         // * 3. Add record to log table
         await tx.logTable.create({
           data: {
-            userId: findAdmin.adminId,
+            adminId: findAdmin.adminId,
             userType: 'admin',
             ipAddress: signInIpAddress,
             device: `${device.type}-${device.brand}-${os.name}-${os.version}-${client.type}-${client.name}-${client.version}`,

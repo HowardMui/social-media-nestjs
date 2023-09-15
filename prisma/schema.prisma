@@ -19,7 +19,7 @@ enum user_type {
 model logTable {
   logId Int @id @default(autoincrement())
   userId Int?
-  AdminId Int?
+  adminId Int?
   userType user_type
   ipAddress String
   device String?
