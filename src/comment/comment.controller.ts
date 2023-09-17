@@ -12,11 +12,16 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CommentService } from './comment.service';
-import { CreateCommentDTO, GetAllPostCommentParams } from './dto';
+import {
+  CreateCommentDTO,
+  GetAllPostCommentParams,
+  GetCommentInOnePostResponse,
+} from './dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Request } from 'express';
+import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -26,6 +31,7 @@ export class CommentController {
   @Get(':postId/comments')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'List comment in post' })
+  @ApiOkResponsePaginated(GetCommentInOnePostResponse)
   getAllPostComment(
     @Param('postId', new ParseIntPipe()) postId: number,
     @Query() query: GetAllPostCommentParams,
