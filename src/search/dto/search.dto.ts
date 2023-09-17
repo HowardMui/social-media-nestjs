@@ -4,10 +4,10 @@ import { IsEnum, IsString } from 'class-validator';
 import { PaginationQueryParams, SearchType } from 'src/types';
 
 export class GetSearchQueryParamsWithFilter extends PaginationQueryParams {
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: true })
   @Transform(({ value }) => value.toString())
   @IsString()
-  keyword?: string;
+  keyword: string;
 
   @ApiProperty({
     required: false,
