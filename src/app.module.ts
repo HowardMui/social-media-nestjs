@@ -14,6 +14,8 @@ import { FileModule } from './file/file.module';
 import { TagModule } from './tag/tag.module';
 import { SearchModule } from './search/search.module';
 import { CronjobsModule } from './cronjobs/cronjobs.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -30,8 +32,27 @@ import { CronjobsModule } from './cronjobs/cronjobs.module';
     TagModule,
     SearchModule,
     CronjobsModule,
+    ThrottlerModule,
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000,
+        limit: 4,
+      },
+      {
+        name: 'medium',
+        ttl: 10000,
+        limit: 10,
+      },
+    ]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
