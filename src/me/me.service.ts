@@ -45,9 +45,9 @@ export class MeService {
         });
 
         if (!findUser) {
-          return new ForbiddenException('Cannot find user');
+          throw new ForbiddenException('Cannot find user');
         } else if (!findUser.UserAuths.length) {
-          return new ForbiddenException('Invalid user.  Please find Admin');
+          throw new ForbiddenException('Invalid user.  Please find Admin');
         }
 
         // * 2. Compare hash password
@@ -56,7 +56,7 @@ export class MeService {
           password,
         );
         if (!passwordMatch) {
-          return new ForbiddenException('Error in email or password');
+          throw new ForbiddenException('Error in email or password');
         }
 
         // * 3. Add record to log table
@@ -446,7 +446,9 @@ export class MeService {
     const { limit, offset } = query;
 
     try {
-      const postsQuery = await this.prisma.$queryRaw<{ count: number; rows: PostResponse[] }[]>`
+      const postsQuery = await this.prisma.$queryRaw<
+        { count: number; rows: PostResponse[] }[]
+      >`
         WITH "Posts" AS (
           SELECT "Post".*, pt."tags",
             COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",

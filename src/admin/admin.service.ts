@@ -69,7 +69,7 @@ export class AdminService {
         });
 
         if (!findAdmin) {
-          return new ForbiddenException('Cannot find Admin');
+          throw new ForbiddenException('Cannot find Admin');
         }
 
         // * 2. Compare hash password
@@ -79,10 +79,10 @@ export class AdminService {
             password,
           );
           if (!passwordMatch) {
-            return new ForbiddenException('Error in email or password');
+            throw new ForbiddenException('Error in email or password');
           }
         } else {
-          return new ForbiddenException(
+          throw new ForbiddenException(
             'Some issue with this account.  Please contact Admin.',
           );
         }
