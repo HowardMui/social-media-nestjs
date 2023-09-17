@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   HttpStatus,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,80 +9,103 @@ import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { CreatePostDTO, GetPostQueryParamsWithFilter } from './dto';
 import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { Tag } from '@prisma/client';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaSrcService) {}
+  constructor(
+    private prisma: PrismaSrcService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   // * Basic CRUD ------------------------------------------------------------------------------------
 
   async getAllPostLists(query: GetPostQueryParamsWithFilter) {
     const { limit, offset, asc, desc, userName } = query;
 
+    console.log('cacheManager', this.cacheManager);
+
     try {
-      const [totalPosts, findPosts] = await this.prisma.$transaction([
-        this.prisma.post.count({
-          where: {
-            OR: [
-              {
-                user: {
-                  userName: {
-                    contains: userName ? userName : undefined,
+      // check if data is in cache:
+      const cachedData = await this.cacheManager.get<{ name: string }>(
+        'get_post_list',
+      );
+      console.log('cachedData', cachedData);
+      if (cachedData) {
+        console.log(`Getting data from cache!`);
+        return `${cachedData.name}`;
+      } else {
+        const [totalPosts, findPosts] = await this.prisma.$transaction([
+          this.prisma.post.count({
+            where: {
+              OR: [
+                {
+                  user: {
+                    userName: {
+                      contains: userName ? userName : undefined,
+                    },
                   },
                 },
-              },
-            ],
-          },
-        }),
-        this.prisma.post.findMany({
-          where: {
-            OR: [
-              {
-                user: {
-                  userName: {
-                    contains: userName ? userName : undefined,
+              ],
+            },
+          }),
+          this.prisma.post.findMany({
+            where: {
+              OR: [
+                {
+                  user: {
+                    userName: {
+                      contains: userName ? userName : undefined,
+                    },
                   },
                 },
-              },
-            ],
-          },
-          orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
-            postId: 'desc',
-          },
-          skip: offset ?? 0,
-          take: limit ?? 20,
-          include: {
-            user: true,
-            tags: true,
-            _count: {
-              select: {
-                likedByUser: true,
-                comments: true,
-                bookmarkedByUser: true,
-                rePostedByUser: true,
+              ],
+            },
+            orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
+              postId: 'desc',
+            },
+            skip: offset ?? 0,
+            take: limit ?? 20,
+            include: {
+              user: true,
+              tags: true,
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostedByUser: true,
+                },
               },
             },
-          },
-        }),
-      ]);
+          }),
+        ]);
 
-      const transformedPosts = findPosts.map(({ _count, tags, ...post }) => ({
-        ...post,
-        tags: tags.map((t) => t.tagName),
-        likedCount: _count.likedByUser,
-        commentCount: _count.comments,
-        bookmarkedCount: _count.bookmarkedByUser,
-        rePostedCount: _count.rePostedByUser,
-      }));
+        const transformedPosts = findPosts.map(({ _count, tags, ...post }) => ({
+          ...post,
+          tags: tags.map((t) => t.tagName),
+          likedCount: _count.likedByUser,
+          commentCount: _count.comments,
+          bookmarkedCount: _count.bookmarkedByUser,
+          rePostedCount: _count.rePostedByUser,
+        }));
 
-      const returnObject = {
-        count: totalPosts,
-        rows: transformedPosts,
-        limit,
-        offset,
-      };
+        const returnObject = {
+          count: totalPosts,
+          rows: transformedPosts,
+          limit,
+          offset,
+        };
 
-      return returnObject;
+        const saveCache = await this.cacheManager.set(
+          'get_post_list',
+          returnObject,
+        );
+        console.log('test1234');
+        console.log('saveCache', saveCache);
+        return returnObject;
+      }
     } catch (err) {
       console.log(err);
       if (err.message.includes('Unknown arg')) {
