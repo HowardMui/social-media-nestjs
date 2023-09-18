@@ -21,7 +21,7 @@ import { redisStore } from 'cache-manager-redis-store';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, cache: true }),
     UserModule,
     PrismaSrcModule,
     MeModule,
@@ -50,15 +50,15 @@ import { redisStore } from 'cache-manager-redis-store';
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (config: ConfigService) => {
-        console.log('config', config);
         const store = await redisStore({
           socket: {
-            host: 'redis-18728.c114.us-east-1-4.ec2.cloud.redislabs.com',
-            port: 18728,
+            host: config.get('REDIS_HOST'),
+            port: config.get('REDIS_PORT'),
           },
-          // username: 'default',
-          password: 'OHUlWH2rRmcLLCjgtEJ12gfthlkN0npo',
-          ttl: 60, // 60 seconds
+          database: 0,
+          username: config.get('REDIS_USERNAME'),
+          password: config.get('REDIS_PASSWORD'),
+          ttl: 60,
         });
 
         return {
@@ -67,9 +67,6 @@ import { redisStore } from 'cache-manager-redis-store';
       },
       inject: [ConfigService],
       isGlobal: true,
-      // store: redisStore,
-      // host: 'localhost',
-      // port: 6379,
     }),
   ],
   controllers: [AppController],

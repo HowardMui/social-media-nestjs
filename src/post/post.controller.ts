@@ -10,7 +10,6 @@ import {
   Query,
   Req,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -23,7 +22,8 @@ import {
   GetPostQueryParamsWithFilter,
   PostResponse,
 } from './dto';
-import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { CacheKey } from '@nestjs/cache-manager';
+import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -32,17 +32,11 @@ export class PostController {
 
   // * Basic CRUD ------------------------------------------------------------------------------------
 
-  @ApiOkResponse({
-    description: 'The post records',
-    type: PostResponse,
-    isArray: true,
-  })
+  @ApiOkResponsePaginated(PostResponse)
   @Get('')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'List All Post' })
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(10)
-  @CacheKey('get_post_list')
+  @CacheKey('testKey')
   getAllPosts(@Query() query: GetPostQueryParamsWithFilter) {
     return this.postService.getAllPostLists(query);
   }

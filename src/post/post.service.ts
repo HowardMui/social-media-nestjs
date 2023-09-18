@@ -6,11 +6,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { CreatePostDTO, GetPostQueryParamsWithFilter } from './dto';
+import {
+  CreatePostDTO,
+  GetPostQueryParamsWithFilter,
+  PostResponse,
+} from './dto';
 import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { Tag } from '@prisma/client';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { ListResponse } from 'src/types';
 
 @Injectable()
 export class PostService {
@@ -23,18 +28,19 @@ export class PostService {
 
   async getAllPostLists(query: GetPostQueryParamsWithFilter) {
     const { limit, offset, asc, desc, userName } = query;
-
-    console.log('cacheManager', this.cacheManager);
-
     try {
+      // * redis lab
       // check if data is in cache:
-      const cachedData = await this.cacheManager.get<{ name: string }>(
-        'get_post_list',
-      );
-      console.log('cachedData', cachedData);
-      if (cachedData) {
+      const cachedData = await this.cacheManager.get<
+        ListResponse<PostResponse>
+      >('get_post_list');
+      if (
+        cachedData &&
+        ((limit && cachedData.limit === limit) || cachedData.limit === 20) &&
+        ((offset && cachedData.offset === offset) || cachedData.offset === 0)
+      ) {
         console.log(`Getting data from cache!`);
-        return `${cachedData.name}`;
+        return cachedData;
       } else {
         const [totalPosts, findPosts] = await this.prisma.$transaction([
           this.prisma.post.count({
@@ -94,16 +100,10 @@ export class PostService {
         const returnObject = {
           count: totalPosts,
           rows: transformedPosts,
-          limit,
-          offset,
+          limit: limit ?? 20,
+          offset: offset ?? 0,
         };
-
-        const saveCache = await this.cacheManager.set(
-          'get_post_list',
-          returnObject,
-        );
-        console.log('test1234');
-        console.log('saveCache', saveCache);
+        await this.cacheManager.set('get_post_list', returnObject);
         return returnObject;
       }
     } catch (err) {
@@ -130,6 +130,8 @@ export class PostService {
       //   GROUP BY "Post"."postId"
       //   `;
       // return fineOnePost;
+
+      await this.cacheManager.set('testKey', { test: 1234 }, 60);
 
       // * origin
       const findAPost = await this.prisma.post.findUnique({

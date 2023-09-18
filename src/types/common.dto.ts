@@ -27,7 +27,7 @@ export class QueryParamsWithFilter extends PaginationQueryParams {
   desc?: string;
 }
 
-export class CustomResWithQueryType<T> {
+export class ListResponse<T> {
   count: number;
   rows: T[];
   limit: number;
