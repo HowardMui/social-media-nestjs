@@ -14,12 +14,12 @@ import { FileModule } from './file/file.module';
 import { TagModule } from './tag/tag.module';
 import { SearchModule } from './search/search.module';
 import { CronjobsModule } from './cronjobs/cronjobs.module';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { CustomCacheModule } from './cache/custom-cache.module';
+import { RateLimitModule } from './rate-limit/rate-limit.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, cache: true }),
     UserModule,
     PrismaSrcModule,
     MeModule,
@@ -32,27 +32,10 @@ import { APP_GUARD } from '@nestjs/core';
     TagModule,
     SearchModule,
     CronjobsModule,
-    ThrottlerModule,
-    ThrottlerModule.forRoot([
-      {
-        name: 'short',
-        ttl: 1000,
-        limit: 4,
-      },
-      {
-        name: 'medium',
-        ttl: 10000,
-        limit: 10,
-      },
-    ]),
+    RateLimitModule,
+    CustomCacheModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-  ],
+  providers: [AppService],
 })
 export class AppModule {}

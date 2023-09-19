@@ -22,6 +22,7 @@ import {
   GetPostQueryParamsWithFilter,
   PostResponse,
 } from './dto';
+import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -30,11 +31,7 @@ export class PostController {
 
   // * Basic CRUD ------------------------------------------------------------------------------------
 
-  @ApiOkResponse({
-    description: 'The post records',
-    type: PostResponse,
-    isArray: true,
-  })
+  @ApiOkResponsePaginated(PostResponse)
   @Get('')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'List All Post' })

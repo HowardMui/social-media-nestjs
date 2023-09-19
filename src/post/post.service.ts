@@ -1,87 +1,111 @@
 import {
   BadRequestException,
   HttpStatus,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { CreatePostDTO, GetPostQueryParamsWithFilter } from './dto';
+import {
+  CreatePostDTO,
+  GetPostQueryParamsWithFilter,
+  PostResponse,
+} from './dto';
 import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { Tag } from '@prisma/client';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { ListResponse } from 'src/types';
 
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaSrcService) {}
+  constructor(
+    private prisma: PrismaSrcService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   // * Basic CRUD ------------------------------------------------------------------------------------
 
   async getAllPostLists(query: GetPostQueryParamsWithFilter) {
     const { limit, offset, asc, desc, userName } = query;
-
     try {
-      const [totalPosts, findPosts] = await this.prisma.$transaction([
-        this.prisma.post.count({
-          where: {
-            OR: [
-              {
-                user: {
-                  userName: {
-                    contains: userName ? userName : undefined,
+      // * redis lab
+      // check if data is in cache:
+      const cachedData = await this.cacheManager.get<
+        ListResponse<PostResponse>
+      >('get_post_list');
+      if (
+        cachedData &&
+        ((limit && cachedData.limit === limit) || cachedData.limit === 20) &&
+        ((offset && cachedData.offset === offset) || cachedData.offset === 0)
+      ) {
+        console.log(`Getting data from cache!`);
+        return cachedData;
+      } else {
+        const [totalPosts, findPosts] = await this.prisma.$transaction([
+          this.prisma.post.count({
+            where: {
+              OR: [
+                {
+                  user: {
+                    userName: {
+                      contains: userName ? userName : undefined,
+                    },
                   },
                 },
-              },
-            ],
-          },
-        }),
-        this.prisma.post.findMany({
-          where: {
-            OR: [
-              {
-                user: {
-                  userName: {
-                    contains: userName ? userName : undefined,
+              ],
+            },
+          }),
+          this.prisma.post.findMany({
+            where: {
+              OR: [
+                {
+                  user: {
+                    userName: {
+                      contains: userName ? userName : undefined,
+                    },
                   },
                 },
-              },
-            ],
-          },
-          orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
-            postId: 'desc',
-          },
-          skip: offset ?? 0,
-          take: limit ?? 20,
-          include: {
-            user: true,
-            tags: true,
-            _count: {
-              select: {
-                likedByUser: true,
-                comments: true,
-                bookmarkedByUser: true,
-                rePostedByUser: true,
+              ],
+            },
+            orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
+              postId: 'desc',
+            },
+            skip: offset ?? 0,
+            take: limit ?? 20,
+            include: {
+              user: true,
+              tags: true,
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostedByUser: true,
+                },
               },
             },
-          },
-        }),
-      ]);
+          }),
+        ]);
 
-      const transformedPosts = findPosts.map(({ _count, tags, ...post }) => ({
-        ...post,
-        tags: tags.map((t) => t.tagName),
-        likedCount: _count.likedByUser,
-        commentCount: _count.comments,
-        bookmarkedCount: _count.bookmarkedByUser,
-        rePostedCount: _count.rePostedByUser,
-      }));
+        const transformedPosts = findPosts.map(({ _count, tags, ...post }) => ({
+          ...post,
+          tags: tags.map((t) => t.tagName),
+          likedCount: _count.likedByUser,
+          commentCount: _count.comments,
+          bookmarkedCount: _count.bookmarkedByUser,
+          rePostedCount: _count.rePostedByUser,
+        }));
 
-      const returnObject = {
-        count: totalPosts,
-        rows: transformedPosts,
-        limit,
-        offset,
-      };
-
-      return returnObject;
+        const returnObject = {
+          count: totalPosts,
+          rows: transformedPosts,
+          limit: limit ?? 20,
+          offset: offset ?? 0,
+        };
+        await this.cacheManager.set('get_post_list', returnObject);
+        return returnObject;
+      }
     } catch (err) {
       console.log(err);
       if (err.message.includes('Unknown arg')) {
@@ -106,6 +130,8 @@ export class PostService {
       //   GROUP BY "Post"."postId"
       //   `;
       // return fineOnePost;
+
+      await this.cacheManager.set('testKey', { test: 1234 }, 60);
 
       // * origin
       const findAPost = await this.prisma.post.findUnique({
