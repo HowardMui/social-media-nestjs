@@ -11,12 +11,16 @@ export class PrismaSrcService extends PrismaClient {
           url: config.get('DATABASE_URL'),
         },
       },
+      // log: ['error', 'info', 'query', 'warn'],
     });
   }
 
   cleanDb() {
+    // Transaction let the delete one by one in array
+    // Delete book must before delete user
     return this.$transaction([
-      this.bookmark.deleteMany(),
+      // this.bookmark.deleteMany(),
+      this.userAuth.deleteMany(),
       this.user.deleteMany(),
     ]);
   }

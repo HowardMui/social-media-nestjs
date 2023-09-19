@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
@@ -10,23 +11,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum user_type {
+  admin
+  user
+}
+
+model logTable {
+  logId Int @id @default(autoincrement())
+  userId Int?
+  adminId Int?
+  userType user_type
+  ipAddress String
+  device String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model User {
   userId      Int      @id @default(autoincrement())
   firstName String?
   LastName String?
   email   String   @unique
-  userName String? @unique
+  userName String @unique
   image String?
   bio String?
   description String?
   isVerified Boolean @default(false)
-  tweets Tweet[]
-  UserAuths UserAuth[]
-  likes   Like[]
+  posts Post[] 
+  rePosts UserRePost[]
+  likedPosts   UserLikedPost[]
+  bookmarkedPosts UserBookmark[] 
   comments       Comment[]
   followers User[] @relation(name: "Followers")
-  follows   User[]  @relation(name: "Followers")
-  bookmarks Bookmark[]
+  following   User[]  @relation(name: "Followers")
+  UserAuths UserAuth[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -39,63 +57,115 @@ model UserAuth{
   hash String
   provider String?
   userId Int @unique
-  user User @relation(fields: [userId], references: [userId])
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime @default(now())
 }
 
-model Tweet{
-  tweetId      Int      @id @default(autoincrement())
+model Admin {
+  adminId Int @id @default(autoincrement())
+  email String @unique
+  displayName String @unique
+  loginName String @unique
+  avatar String?
+  notificationToken String?
+  role String?
+  AdminAuth AdminAuth[] 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminAuth {
+  adminAuthId Int @id @default(autoincrement())
+  email String @unique
+  loginName String
+  hash String
+  uid Int?
+  provider String?
+  adminId Int @unique
+  Admin Admin @relation(fields: [adminId], references: [adminId], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime @default(now())
+}
+
+
+model Post{
+  postId      Int      @id @default(autoincrement())
   image String?
   content String
-  impression Int @default(0)
   userId Int
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  likes   Like[]
+  rePostedByUser UserRePost[]
+  likedByUser   UserLikedPost[]
+  tags Tag[] @relation(name: "PostTags")
   comments       Comment[]
+  bookmarkedByUser UserBookmark[] 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime @default(now())
 }
 
-model Like {
-  // likeId Int  @id @default(autoincrement())
-  user   User @relation(fields: [userId], references: [userId])
-  tweet  Tweet @relation(fields: [tweetId], references: [tweetId])
-  userId Int
-  tweetId Int
-
+model Tag{
+  tagId Int @id @default(autoincrement())
+  tagName String @unique
+  posts Post[] @relation(name: "PostTags")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@id([userId, tweetId])
-  @@index([userId])
-  @@index([tweetId])
-}
-
-// One to many
-model Bookmark {
-  bookmarkId Int @id @default(autoincrement())
-
-  title String?
-  content String?
-  link String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userId Int
-  user User @relation(fields: [userId], references: [userId])
 }
 
 model Comment {
   commentId         Int       @id @default(autoincrement())
-  comment    String
-  user       User      @relation(fields: [userId], references: [userId])
+  message    String
+  user       User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
   userId     Int
-  tweet      Tweet     @relation(fields: [tweetId], references: [tweetId])
-  tweetId    Int
+  post      Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  postId    Int
+  parentCommentId Int?
+  parentComment Comment? @relation("CommentParentChildren", fields: [parentCommentId], references: [commentId], onDelete: Cascade)
+  comments Comment[] @relation("CommentParentChildren")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime @default(now())
+}
+
+// * Explicit Many to many
+model UserLikedPost {
+  user   User @relation(fields: [userId], references: [userId])
+  post  Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  userId Int
+  postId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, postId])
+  // @@index([userId])
+  // @@index([postId])
+  @@map("user_liked_posts")
+}
+
+model UserBookmark{
+  postId Int
+  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  userId Int
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@map("user_bookmarked_posts")
+}
+
+model UserRePost {
+  postId Int
+  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  userId Int
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@map("user_rePost_posts")
 }
