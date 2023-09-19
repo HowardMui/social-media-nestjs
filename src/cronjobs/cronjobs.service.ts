@@ -12,7 +12,7 @@ export class CronjobsService {
     try {
       this.logger.warn("It's time to reset user table log");
       await this.prisma.logTable.deleteMany({});
-      this.logger.warn('Log table was reset successfully');
+      this.logger.log('Log table was reset successfully');
       return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);

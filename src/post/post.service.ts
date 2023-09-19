@@ -3,6 +3,7 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
@@ -23,6 +24,7 @@ export class PostService {
     private prisma: PrismaSrcService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
+  private readonly logger = new Logger(PostService.name);
 
   // * Basic CRUD ------------------------------------------------------------------------------------
 
@@ -39,7 +41,7 @@ export class PostService {
         ((limit && cachedData.limit === limit) || cachedData.limit === 20) &&
         ((offset && cachedData.offset === offset) || cachedData.offset === 0)
       ) {
-        console.log(`Getting data from cache!`);
+        this.logger.log('Cached data');
         return cachedData;
       } else {
         const [totalPosts, findPosts] = await this.prisma.$transaction([
@@ -130,8 +132,6 @@ export class PostService {
       //   GROUP BY "Post"."postId"
       //   `;
       // return fineOnePost;
-
-      await this.cacheManager.set('testKey', { test: 1234 }, 60);
 
       // * origin
       const findAPost = await this.prisma.post.findUnique({
