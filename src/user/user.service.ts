@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   HttpStatus,
+  // Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaSrcService } from '../prisma-src/prisma-src.service';
@@ -10,10 +12,17 @@ import { UpdateUserDTO } from './dto/update-user.dto';
 import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { GetUserPostEnum, GetUserPostQuery } from './dto/user-post.dto';
 import { PostResponse } from 'src/post/dto';
+// import { CACHE_MANAGER } from '@nestjs/cache-manager';
+// import { ListResponse } from 'src/types';
+// import { Cache } from 'cache-manager';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaSrcService) {}
+  constructor(
+    private prisma: PrismaSrcService,
+    // @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    ) {}
+    // private readonly logger = new Logger(UserService.name),
 
   // * User CRUD ------------------------------------------------------------------------------------------------
 
@@ -106,6 +115,21 @@ export class UserService {
     const { limit, offset, postType } = query;
 
     try {
+      // const cachedData = await this.cacheManager.get<
+      //   ListResponse<PostResponse>
+      // >('get_user_post_list');
+      // if (
+      //   cachedData &&
+      //   ((limit && cachedData.limit === limit) || cachedData.limit === 20) &&
+      //   ((offset && cachedData.offset === offset) || cachedData.offset === 0) && 
+      //   postType === cachedData.
+      // ) {
+      //   this.logger.log('Cached data');
+      //   return cachedData;
+      // } else {
+
+      // }
+
       switch (postType) {
         // * Find user's post and rePosts
         case GetUserPostEnum.Posts:
@@ -227,8 +251,8 @@ export class UserService {
           const returnPostObject = {
             count: postsQuery[0].count,
             rows: postsQuery[0].rows,
-            limit,
-            offset,
+            limit: limit ?? 20,
+            offset: offset ?? 0,
           };
           return returnPostObject;
 
