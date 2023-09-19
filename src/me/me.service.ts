@@ -332,7 +332,11 @@ export class MeService {
     try {
       const [totalBookmarkedPost, bookmarkedPostList] =
         await this.prisma.$transaction([
-          this.prisma.userBookmark.count(),
+          this.prisma.userBookmark.count({
+            where: {
+              userId,
+            },
+          }),
           this.prisma.userBookmark.findMany({
             where: {
               userId,
@@ -389,7 +393,11 @@ export class MeService {
 
     try {
       const [totalLikedPost, likedPostList] = await this.prisma.$transaction([
-        this.prisma.userLikedPost.count(),
+        this.prisma.userLikedPost.count({
+          where: {
+            userId,
+          },
+        }),
         this.prisma.userLikedPost.findMany({
           where: {
             userId,
