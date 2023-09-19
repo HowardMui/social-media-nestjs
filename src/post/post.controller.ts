@@ -22,7 +22,6 @@ import {
   GetPostQueryParamsWithFilter,
   PostResponse,
 } from './dto';
-import { CacheKey } from '@nestjs/cache-manager';
 import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 
 @ApiTags('Posts')
@@ -36,7 +35,6 @@ export class PostController {
   @Get('')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'List All Post' })
-  @CacheKey('testKey')
   getAllPosts(@Query() query: GetPostQueryParamsWithFilter) {
     return this.postService.getAllPostLists(query);
   }
