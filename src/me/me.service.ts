@@ -8,6 +8,7 @@ import {
   GetMeBookmarkedQueryParams,
   UserSignInDTO,
   UserSignUpDTO,
+  GetMePostEnum,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
@@ -17,6 +18,7 @@ import * as _ from 'lodash';
 import { PostResponse } from 'src/post/dto';
 import { UpdateMeProfileDTO } from './dto/me-update-profile.dto';
 import { formatDevice } from 'src/helper';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class MeService {
@@ -24,6 +26,7 @@ export class MeService {
     private prisma: PrismaSrcService,
     private jwt: JwtService,
     private config: ConfigService,
+    private redis: RedisService,
   ) {}
 
   // * Auth ------------------------------------------------------------------------------------
@@ -451,130 +454,245 @@ export class MeService {
   // * Find all current user post ------------------------------------------------------------------------------------
 
   async getAllMePost(query: GetMePostQueryParams, userId: number) {
-    const { limit, offset } = query;
+    const { limit, offset, postType } = query;
 
     try {
-      const postsQuery = await this.prisma.$queryRaw<
-        { count: number; rows: PostResponse[] }[]
-      >`
-        WITH "Posts" AS (
-          SELECT "Post".*, pt."tags",
-            COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
-            COALESCE(lc.likesCount::integer, 0) AS "likesCount",
-            COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
-          FROM "User"
-          LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
-          LEFT JOIN "Post" ON "Post"."postId" = "user_rePost_posts"."postId"
-          LEFT JOIN (
-            SELECT "Post"."postId", 
-              CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
-                ELSE '[]' END AS "tags"
-            FROM "Post"
-            LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-            LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-            GROUP BY "Post"."postId"
-          ) pt ON pt."postId" = "Post"."postId"
-          LEFT JOIN (
-            SELECT
-              "postId",
-              COUNT(*) AS commentsCount
-            FROM
-              "Comment"
-            GROUP BY
-              "postId"
-          ) pc ON pc."postId" = "Post"."postId"
-          LEFT JOIN (
-            SELECT
-              "postId",
-              COUNT(*) AS likesCount
-            FROM
-              "user_liked_posts"
-            GROUP BY
-              "postId"
-          ) lc ON lc."postId" = "Post"."postId"
-          LEFT JOIN (
-            SELECT
-              "postId",
-              COUNT(*) AS rePostsCount
-            FROM
-              "user_rePost_posts"
-            GROUP BY
-              "postId"
-          ) rc ON rc."postId" = "Post"."postId"
-          WHERE "User"."userId" = ${userId}
-          -- // * UNION All (Combine two different table and query)
-          UNION ALL
-          SELECT "Post".*, pt."tags",
-            COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
-            COALESCE(lc.likesCount::integer, 0) AS "likesCount",
-            COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
-          FROM "User"
-          LEFT JOIN "Post" ON "Post"."userId" = "User"."userId"
-          LEFT JOIN (
-            SELECT "Post"."postId", 
-              CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
-                ELSE '[]' END AS "tags"
-            FROM "Post"
-            LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-            LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-            GROUP BY "Post"."postId"
-          ) pt ON pt."postId" = "Post"."postId"
-          LEFT JOIN (
-            SELECT
-              "postId",
-              COUNT(*) AS commentsCount
-            FROM
-              "Comment"
-            GROUP BY
-              "postId"
-          ) pc ON pc."postId" = "Post"."postId"
-          LEFT JOIN (
-            SELECT
-              "postId",
-              COUNT(*) AS likesCount
-            FROM
-              "user_liked_posts"
-            GROUP BY
-              "postId"
-          ) lc ON lc."postId" = "Post"."postId"
-          LEFT JOIN (
-            SELECT
-              "postId",
-              COUNT(*) AS rePostsCount
-            FROM
-              "user_rePost_posts"
-            GROUP BY
-              "postId"
-          ) rc ON rc."postId" = "Post"."postId"
-          WHERE "User"."userId" = ${userId}
-          -- ORDER BY "createdAt" DESC
-          -- LIMIT ${limit || 20}
-          -- OFFSET ${offset || 0}
-        ),
-        -- // * find out the query and filter it
-        "PaginatedPosts" AS (
-          SELECT *
-          FROM "Posts"
-          ORDER BY "createdAt" DESC
-          LIMIT ${limit || 20}
-          OFFSET ${offset || 0}
-        ),
-        -- // * reform the the data into rows and count (count form the Posts -> avoid involve into the pagination)
-        "AggregatedPosts" AS (
-          SELECT json_agg("PaginatedPosts") AS "rows", (SELECT COUNT(*) FROM "Posts")::integer AS "count"
-          FROM "PaginatedPosts"
-        )
-        SELECT "count", "rows"
-        FROM "AggregatedPosts";
-      `;
-      const returnObject = {
-        count: postsQuery[0].count,
-        rows: postsQuery[0].rows,
-        limit: limit ?? 20,
-        offset: offset ?? 0,
-      };
+      switch (postType) {
+        // * Find user's post and rePosts
+        case GetMePostEnum.所有帖文:
+          const postsQuery = await this.prisma.$queryRaw<
+            { count: number; rows: PostResponse[] }[]
+          >`
+            WITH "Posts" AS (
+              SELECT "Post".*, pt."tags",
+                COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
+                COALESCE(lc.likesCount::integer, 0) AS "likesCount",
+                COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
+              FROM "User"
+              LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
+              LEFT JOIN "Post" ON "Post"."postId" = "user_rePost_posts"."postId"
+              LEFT JOIN (
+                SELECT "Post"."postId", 
+                  CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
+                    ELSE '[]' END AS "tags"
+                FROM "Post"
+                LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
+                LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
+                GROUP BY "Post"."postId"
+              ) pt ON pt."postId" = "Post"."postId"
+              LEFT JOIN (
+                SELECT
+                  "postId",
+                  COUNT(*) AS commentsCount
+                FROM
+                  "Comment"
+                GROUP BY
+                  "postId"
+              ) pc ON pc."postId" = "Post"."postId"
+              LEFT JOIN (
+                SELECT
+                  "postId",
+                  COUNT(*) AS likesCount
+                FROM
+                  "user_liked_posts"
+                GROUP BY
+                  "postId"
+              ) lc ON lc."postId" = "Post"."postId"
+              LEFT JOIN (
+                SELECT
+                  "postId",
+                  COUNT(*) AS rePostsCount
+                FROM
+                  "user_rePost_posts"
+                GROUP BY
+                  "postId"
+              ) rc ON rc."postId" = "Post"."postId"
+              WHERE "User"."userId" = ${userId}
+              -- // * UNION All (Combine two different table and query)
+              UNION ALL
+              SELECT "Post".*, pt."tags",
+                COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
+                COALESCE(lc.likesCount::integer, 0) AS "likesCount",
+                COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
+              FROM "User"
+              LEFT JOIN "Post" ON "Post"."userId" = "User"."userId"
+              LEFT JOIN (
+                SELECT "Post"."postId", 
+                  CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
+                    ELSE '[]' END AS "tags"
+                FROM "Post"
+                LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
+                LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
+                GROUP BY "Post"."postId"
+              ) pt ON pt."postId" = "Post"."postId"
+              LEFT JOIN (
+                SELECT
+                  "postId",
+                  COUNT(*) AS commentsCount
+                FROM
+                  "Comment"
+                GROUP BY
+                  "postId"
+              ) pc ON pc."postId" = "Post"."postId"
+              LEFT JOIN (
+                SELECT
+                  "postId",
+                  COUNT(*) AS likesCount
+                FROM
+                  "user_liked_posts"
+                GROUP BY
+                  "postId"
+              ) lc ON lc."postId" = "Post"."postId"
+              LEFT JOIN (
+                SELECT
+                  "postId",
+                  COUNT(*) AS rePostsCount
+                FROM
+                  "user_rePost_posts"
+                GROUP BY
+                  "postId"
+              ) rc ON rc."postId" = "Post"."postId"
+              WHERE "User"."userId" = ${userId}
+              -- ORDER BY "createdAt" DESC
+              -- LIMIT ${limit || 20}
+              -- OFFSET ${offset || 0}
+            ),
+            -- // * find out the query and filter it
+            "PaginatedPosts" AS (
+              SELECT *
+              FROM "Posts"
+              ORDER BY "createdAt" DESC
+              LIMIT ${limit || 20}
+              OFFSET ${offset || 0}
+            ),
+            -- // * reform the the data into rows and count (count form the Posts -> avoid involve into the pagination)
+            "AggregatedPosts" AS (
+              SELECT json_agg("PaginatedPosts") AS "rows", (SELECT COUNT(*) FROM "Posts")::integer AS "count"
+              FROM "PaginatedPosts"
+            )
+            SELECT "count", "rows"
+            FROM "AggregatedPosts";
+          `;
+          const returnAllPostObject = {
+            count: postsQuery[0].count,
+            rows: postsQuery[0].rows,
+            limit: limit ?? 20,
+            offset: offset ?? 0,
+          };
 
-      return returnObject;
+          return returnAllPostObject;
+        case GetMePostEnum.回覆:
+
+        case GetMePostEnum.讚好:
+          const [totalLikedPost, likedPostList] =
+            await this.prisma.$transaction([
+              this.prisma.userLikedPost.count({
+                where: {
+                  userId,
+                },
+              }),
+              this.prisma.userLikedPost.findMany({
+                where: {
+                  userId,
+                },
+                skip: offset ?? 0,
+                take: limit ?? 20,
+                select: {
+                  post: {
+                    include: {
+                      user: true,
+                      tags: true,
+                      _count: {
+                        select: {
+                          likedByUser: true,
+                          comments: true,
+                          bookmarkedByUser: true,
+                          rePostedByUser: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+            ]);
+
+          const transformLikedPosts = _.map(likedPostList, ({ post }) => {
+            const { _count, ...rest } = post;
+            return {
+              ...rest,
+              tags: post.tags.map((t) => t.tagName),
+              likedCount: _count.likedByUser,
+              commentCount: _count.comments,
+              bookmarkedCount: _count.bookmarkedByUser,
+              rePostedCount: _count.rePostedByUser,
+            };
+          });
+
+          const returnLikedPostObject = {
+            count: totalLikedPost,
+            rows: transformLikedPosts,
+            limit: limit ?? 0,
+            offset: offset ?? 20,
+          };
+
+          return returnLikedPostObject;
+
+        case GetMePostEnum.書籤:
+          const [totalBookmarkedPost, bookmarkedPostList] =
+            await this.prisma.$transaction([
+              this.prisma.userBookmark.count({
+                where: {
+                  userId,
+                },
+              }),
+              this.prisma.userBookmark.findMany({
+                where: {
+                  userId,
+                },
+                skip: offset ?? 0,
+                take: limit ?? 20,
+                select: {
+                  post: {
+                    include: {
+                      user: true,
+                      tags: true,
+                      _count: {
+                        select: {
+                          likedByUser: true,
+                          comments: true,
+                          bookmarkedByUser: true,
+                          rePostedByUser: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+            ]);
+
+          const transformBookmarkPosts = _.map(
+            bookmarkedPostList,
+            ({ post }) => {
+              const { _count, ...rest } = post;
+              return {
+                ...rest,
+                tags: post.tags.map((t) => t.tagName),
+                likedCount: _count.likedByUser,
+                commentCount: _count.comments,
+                bookmarkedCount: _count.bookmarkedByUser,
+                rePostedCount: _count.rePostedByUser,
+              };
+            },
+          );
+
+          const returnObject = {
+            count: totalBookmarkedPost,
+            rows: transformBookmarkPosts,
+            limit: limit ?? 0,
+            offset: offset ?? 20,
+          };
+          return returnObject;
+      }
     } catch (err) {
       console.log(err);
     }
