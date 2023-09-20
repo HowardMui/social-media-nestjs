@@ -27,9 +27,7 @@ export class PostService {
   async getAllPostLists(query: GetPostQueryParamsWithFilter) {
     const { limit, offset, asc, desc, userName } = query;
     try {
-      // * redis lab
-
-      // check if data is in cache:
+      // * check if data is in cache:
       const cachedData = await this.redis.getRedisValue<
         ListResponse<PostResponse>
       >(`gap${formatDataToRedis<GetPostQueryParamsWithFilter>(query)}`);
