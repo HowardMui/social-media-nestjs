@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   HttpStatus,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -14,16 +13,12 @@ import {
 } from './dto';
 import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { Tag } from '@prisma/client';
-import { Cache } from 'cache-manager';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ListResponse } from 'src/types';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class PostService {
-  constructor(
-    private prisma: PrismaSrcService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+  constructor(private prisma: PrismaSrcService, private redis: RedisService) {}
   private readonly logger = new Logger(PostService.name);
 
   // * Basic CRUD ------------------------------------------------------------------------------------
@@ -32,16 +27,16 @@ export class PostService {
     const { limit, offset, asc, desc, userName } = query;
     try {
       // * redis lab
+
       // check if data is in cache:
-      const cachedData = await this.cacheManager.get<
+      const cachedData = await this.redis.getRedisValue<
         ListResponse<PostResponse>
-      >('get_post_list');
-      if (
-        cachedData &&
-        ((limit && cachedData.limit === limit) || cachedData.limit === 20) &&
-        ((offset && cachedData.offset === offset) || cachedData.offset === 0)
-      ) {
-        this.logger.log('Cached data');
+      >(
+        `gap-${limit ?? 20}-${offset ?? 0}${asc ? `-a:${asc}` : ''}${
+          desc ? `-d:${desc}` : ''
+        }${userName ? `-u:${userName}` : ''}`,
+      );
+      if (cachedData) {
         return cachedData;
       } else {
         const [totalPosts, findPosts] = await this.prisma.$transaction([
@@ -105,7 +100,10 @@ export class PostService {
           limit: limit ?? 20,
           offset: offset ?? 0,
         };
-        await this.cacheManager.set('get_post_list', returnObject);
+        await this.redis.setRedisValue(
+          `gap-${limit ?? 20}-${offset ?? 0}`,
+          returnObject,
+        );
         return returnObject;
       }
     } catch (err) {

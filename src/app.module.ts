@@ -14,7 +14,6 @@ import { FileModule } from './file/file.module';
 import { TagModule } from './tag/tag.module';
 import { SearchModule } from './search/search.module';
 import { CronjobsModule } from './cronjobs/cronjobs.module';
-import { CustomCacheModule } from './cache/custom-cache.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 
 @Module({
@@ -33,7 +32,6 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
     SearchModule,
     CronjobsModule,
     RateLimitModule,
-    CustomCacheModule,
   ],
   controllers: [AppController],
   providers: [AppService],
