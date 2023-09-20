@@ -15,6 +15,7 @@ import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { Tag } from '@prisma/client';
 import { ListResponse } from 'src/types';
 import { RedisService } from 'src/redis/redis.service';
+import { formatDataToRedis } from 'src/helper/format-data-to-redis';
 
 @Injectable()
 export class PostService {
@@ -31,11 +32,7 @@ export class PostService {
       // check if data is in cache:
       const cachedData = await this.redis.getRedisValue<
         ListResponse<PostResponse>
-      >(
-        `gap-${limit ?? 20}-${offset ?? 0}${asc ? `-a:${asc}` : ''}${
-          desc ? `-d:${desc}` : ''
-        }${userName ? `-u:${userName}` : ''}`,
-      );
+      >(`gap${formatDataToRedis<GetPostQueryParamsWithFilter>(query)}`);
       if (cachedData) {
         return cachedData;
       } else {
@@ -101,7 +98,7 @@ export class PostService {
           offset: offset ?? 0,
         };
         await this.redis.setRedisValue(
-          `gap-${limit ?? 20}-${offset ?? 0}`,
+          `gap${formatDataToRedis<GetPostQueryParamsWithFilter>(query)}`,
           returnObject,
         );
         return returnObject;
