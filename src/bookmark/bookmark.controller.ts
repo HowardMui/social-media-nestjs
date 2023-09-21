@@ -27,7 +27,7 @@ export class BookmarkController {
     @Param('postId', new ParseIntPipe()) postId: number,
     @Req() req: Request,
   ) {
-    return this.bookmarkService.bookmarkOnePost(postId, req.user);
+    return this.bookmarkService.bookmarkOnePost(postId, req.user['userId']);
   }
 
   @Delete(':postId/bookmark')
@@ -38,6 +38,6 @@ export class BookmarkController {
     @Param('postId', new ParseIntPipe()) postId: number,
     @Req() req: Request,
   ) {
-    return this.bookmarkService.deleteOneBookmark(postId, req.user);
+    return this.bookmarkService.deleteOneBookmark(postId, req.user['userId']);
   }
 }
