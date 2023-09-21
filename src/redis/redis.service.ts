@@ -21,6 +21,16 @@ export class RedisService {
     }
   }
 
+  async getRedisKeysPattern(key: string): Promise<string[]> {
+    try {
+      const findPattern = await this.cache.store.keys(`*${key}*`);
+      return findPattern;
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
+  }
+
   async setRedisValue(key: string, value: any, ttl?: number): Promise<void> {
     try {
       await this.cache.set(
@@ -28,13 +38,23 @@ export class RedisService {
         value,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        // * Set in ms
+        // * Set in ms (Wrong ttl type in module that will lead the ttl fail)
         { ttl: ttl ?? 60 * 5 },
       );
       this.logger.log('set data to redis lab');
       return;
     } catch (err) {
       this.logger.log('Error in setting cached data');
+      throw err;
+    }
+  }
+
+  async deleteRedisKeys(key: string) {
+    try {
+      await this.cache.del(key);
+      this.logger.log(`deleted key ${key}`);
+    } catch (err) {
+      console.log(err);
       throw err;
     }
   }

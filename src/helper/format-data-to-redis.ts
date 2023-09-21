@@ -1,18 +1,18 @@
 export const formatDataToRedis = <T>(filter: T): string => {
   let queryString = '';
   if (!filter['limit']) {
-    queryString += `-20`;
+    queryString += `-l:20`;
   }
   if (!filter['offset']) {
-    queryString += `-0`;
+    queryString += `-o:0`;
   }
   for (const [key, value] of Object.entries(filter)) {
     switch (key) {
       case 'limit':
-        queryString += `-${value}`;
+        queryString += `-l:${value}`;
         break;
       case 'offset':
-        queryString += `-${value}`;
+        queryString += `-o:${value}`;
         break;
       case 'asc':
         queryString += `-a:${value}`;
