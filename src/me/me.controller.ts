@@ -33,6 +33,7 @@ import {
   GetMeBookmarkedQueryParams,
   UserSignInDTO,
   UserSignUpDTO,
+  GetMeCommentQueryParams,
 } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
@@ -114,33 +115,33 @@ export class MeController {
 
   // * bookmark Action ------------------------------------------------------------------------------------
 
-  @Get('posts/bookmark')
-  @ApiOkResponsePaginated(GetMeBookMarkedPostRes)
-  @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  getMeBookmarkList(
-    @Query() query: GetMeBookmarkedQueryParams,
-    @Req() req: Request,
-  ) {
-    return this.userProfileService.getAllMeBookmarkList(
-      query,
-      req.user['userId'],
-    );
-  }
+  // @Get('posts/bookmark')
+  // @ApiOkResponsePaginated(GetMeBookMarkedPostRes)
+  // @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
+  // @UseGuards(AuthGuard('jwt'), RolesGuard)
+  // @Roles(Role.User)
+  // getMeBookmarkList(
+  //   @Query() query: GetMeBookmarkedQueryParams,
+  //   @Req() req: Request,
+  // ) {
+  //   return this.userProfileService.getAllMeBookmarkList(
+  //     query,
+  //     req.user['userId'],
+  //   );
+  // }
 
   // * like Action ------------------------------------------------------------------------------------
-  @Get('posts/like')
-  @ApiOkResponsePaginated(GetMeLikedResponse)
-  @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  getMeLikedPost(@Query() query: GetMeLikedQueryParams, @Req() req: Request) {
-    return this.userProfileService.getMeLikedPostList(
-      query,
-      req.user['userId'],
-    );
-  }
+  // @Get('posts/like')
+  // @ApiOkResponsePaginated(GetMeLikedResponse)
+  // @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
+  // @UseGuards(AuthGuard('jwt'), RolesGuard)
+  // @Roles(Role.User)
+  // getMeLikedPost(@Query() query: GetMeLikedQueryParams, @Req() req: Request) {
+  //   return this.userProfileService.getMeLikedPostList(
+  //     query,
+  //     req.user['userId'],
+  //   );
+  // }
 
   // * Find all current user post ------------------------------------------------------------------------------------
   @Get('posts')
@@ -150,5 +151,16 @@ export class MeController {
   @Roles(Role.User)
   getAllMePost(@Query() query: GetMePostQueryParams, @Req() req: Request) {
     return this.userProfileService.getAllMePost(query, req.user['userId']);
+  }
+
+  @Get('comments')
+  @ApiOperation({ summary: 'List all user comments. App User Only' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  getAllMeCommentInPost(
+    @Query() query: GetMeCommentQueryParams,
+    @Req() req: Request,
+  ) {
+    return this.userProfileService.getAllMeComment(query, req.user['userId']);
   }
 }

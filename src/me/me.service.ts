@@ -9,6 +9,7 @@ import {
   UserSignInDTO,
   UserSignUpDTO,
   GetMePostEnum,
+  GetMeCommentQueryParams,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
@@ -780,6 +781,14 @@ export class MeService {
       }
     } catch (err) {
       console.log(err);
+    }
+  }
+
+  async getAllMeComment(query: GetMeCommentQueryParams, userId: number){
+    try{
+      
+    } catch(err){
+      console.log(err)
     }
   }
 }
