@@ -168,9 +168,8 @@ export class MeService {
   async getCurrentUserProfile(currentUserId: number) {
     try {
       // * gmpf = get me profile
-      const cacheMeProfile = await this.redis.getRedisValue<
-        ListResponse<GetMeFollowersResponse>
-      >(`gmpf`);
+      const cacheMeProfile =
+        await this.redis.getRedisValue<GetMeFollowersResponse>(`gmpf`);
       if (cacheMeProfile) {
         return cacheMeProfile;
       } else {

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaSrcService } from '../prisma-src/prisma-src.service';
-import { GetUserListQueryParams } from './dto';
+import { GetOneUserResponse, GetUserListQueryParams } from './dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
 import { GetUserPostEnum, GetUserPostQuery } from './dto/user-post.dto';
@@ -73,31 +73,41 @@ export class UserService {
 
   async getOneUser(userId: number) {
     try {
-      const findOneUser = await this.prisma.user.findUnique({
-        where: {
-          userId,
-        },
-        include: {
-          _count: {
-            select: {
-              followers: true,
-              following: true,
+      // * gupf = get user profile
+      const cacheUserProfile =
+        await this.redis.getRedisValue<GetOneUserResponse>(`gupf-u:${userId}`);
+      if (cacheUserProfile) {
+        return cacheUserProfile;
+      } else {
+        const findOneUser = await this.prisma.user.findUnique({
+          where: {
+            userId,
+          },
+          include: {
+            _count: {
+              select: {
+                followers: true,
+                following: true,
+              },
             },
           },
-        },
-      });
-      if (!findOneUser) {
-        return new NotFoundException();
+        });
+        if (!findOneUser) {
+          return new NotFoundException();
+        }
+
+        const { _count, ...user } = findOneUser;
+
+        const transformedUser = {
+          followingCount: _count.following,
+          followersCount: _count.followers,
+        };
+        await this.redis.setRedisValue(`gupf-u:${userId}`, {
+          ...user,
+          ...transformedUser,
+        });
+        return { ...user, ...transformedUser };
       }
-
-      const { _count, ...user } = findOneUser;
-
-      const transformedUser = {
-        followingCount: _count.following,
-        followersCount: _count.followers,
-      };
-
-      return { ...user, ...transformedUser };
     } catch (err) {
       console.log(err);
     }
