@@ -10,6 +10,8 @@ import {
   UserSignUpDTO,
   GetMeCommentQueryParams,
   GetMeCommentResponse,
+  GetMeFollowingResponse,
+  GetMeFollowersResponse,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
@@ -165,27 +167,35 @@ export class MeService {
 
   async getCurrentUserProfile(currentUserId: number) {
     try {
-      const findMe = await this.prisma.user.findUnique({
-        where: {
-          userId: currentUserId,
-        },
-        include: {
-          _count: {
-            select: {
-              followers: true,
-              following: true,
+      // * gmpf = get me profile
+      const cacheMeProfile = await this.redis.getRedisValue<
+        ListResponse<GetMeFollowersResponse>
+      >(`gmpf`);
+      if (cacheMeProfile) {
+        return cacheMeProfile;
+      } else {
+        const findMe = await this.prisma.user.findUnique({
+          where: {
+            userId: currentUserId,
+          },
+          include: {
+            _count: {
+              select: {
+                followers: true,
+                following: true,
+              },
             },
           },
-        },
-      });
-      const { _count, ...rest } = findMe;
-      const transformedMe = {
-        ...rest,
-        followersCount: _count.followers,
-        followingCount: _count.following,
-      };
-
-      return transformedMe;
+        });
+        const { _count, ...rest } = findMe;
+        const formattedProfile = {
+          ...rest,
+          followersCount: _count.followers,
+          followingCount: _count.following,
+        };
+        await this.redis.setRedisValue(`gmpf`, formattedProfile);
+        return formattedProfile;
+      }
     } catch (err) {
       console.log(err);
     }
@@ -211,56 +221,66 @@ export class MeService {
     const { limit, offset } = query;
 
     try {
-      const [totalFollowers, followersList] = await this.prisma.$transaction([
-        this.prisma.user.findUnique({
-          where: {
-            userId,
-          },
-          select: {
-            _count: {
-              select: {
-                followers: true,
+      // * gmfe = get my followers
+      const cacheFollowersData = await this.redis.getRedisValue<
+        ListResponse<GetMeFollowersResponse>
+      >(`gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query)}`);
+      if (cacheFollowersData) {
+        return cacheFollowersData;
+      } else {
+        const [totalFollowers, followersList] = await this.prisma.$transaction([
+          this.prisma.user.findUnique({
+            where: {
+              userId,
+            },
+            select: {
+              _count: {
+                select: {
+                  followers: true,
+                },
               },
             },
-          },
-        }),
-        this.prisma.user.findUnique({
-          where: {
-            userId,
-          },
-          select: {
-            followers: {
-              skip: offset || 0,
-              take: limit || 20,
-              include: {
-                followers: true,
+          }),
+          this.prisma.user.findUnique({
+            where: {
+              userId,
+            },
+            select: {
+              followers: {
+                skip: offset || 0,
+                take: limit || 20,
+                include: {
+                  followers: true,
+                },
               },
             },
+          }),
+        ]);
+        // * Add isFollowing boolean into return list
+        const formatFollowersList = followersList.followers.map(
+          ({ followers, ...restFollower }) => {
+            const isFollowing = followers.some(
+              (eachUserInFollowers) => eachUserInFollowers.userId === userId,
+            );
+            return {
+              ...restFollower,
+              isFollowing,
+            };
           },
-        }),
-      ]);
+        );
 
-      // * Add isFollowing boolean into return list
-      const formatFollowersList = followersList.followers.map(
-        ({ followers, ...restFollower }) => {
-          const isFollowing = followers.some(
-            (eachUserInFollowers) => eachUserInFollowers.userId === userId,
-          );
-          return {
-            ...restFollower,
-            isFollowing,
-          };
-        },
-      );
-
-      const returnObject = {
-        count: totalFollowers._count.followers,
-        rows: formatFollowersList,
-        limit: limit ?? 0,
-        offset: offset ?? 20,
-      };
-
-      return returnObject;
+        const returnObject = {
+          count: totalFollowers._count.followers,
+          rows: formatFollowersList,
+          limit: limit ?? 0,
+          offset: offset ?? 20,
+        };
+        await this.redis.setRedisValue(
+          `gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query)}`,
+          returnObject,
+        );
+        return returnObject;
+      }
     } catch (err) {
       console.log(err);
       throw err;
@@ -270,57 +290,68 @@ export class MeService {
   async getUserFollowing(userId: number, query: GetMeFollowingQueryParams) {
     const { limit, offset } = query;
     try {
-      const [totalFollowing, followingList] = await this.prisma.$transaction([
-        // * Find one and find total
-        this.prisma.user.findUnique({
-          where: {
-            userId,
-          },
-          select: {
-            _count: {
-              select: {
-                following: true,
+      // * gmfi = get my following
+      const cacheFollowingData = await this.redis.getRedisValue<
+        ListResponse<GetMeFollowingResponse>
+      >(`gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query)}`);
+      if (cacheFollowingData) {
+        return cacheFollowingData;
+      } else {
+        const [totalFollowing, followingList] = await this.prisma.$transaction([
+          // * Find one and find total
+          this.prisma.user.findUnique({
+            where: {
+              userId,
+            },
+            select: {
+              _count: {
+                select: {
+                  following: true,
+                },
               },
             },
-          },
-        }),
-        this.prisma.user.findUnique({
-          where: {
-            userId,
-          },
-          select: {
-            following: {
-              skip: offset || 0,
-              take: limit || 20,
-              include: {
-                followers: true,
+          }),
+          this.prisma.user.findUnique({
+            where: {
+              userId,
+            },
+            select: {
+              following: {
+                skip: offset || 0,
+                take: limit || 20,
+                include: {
+                  followers: true,
+                },
               },
             },
+          }),
+        ]);
+
+        // * Add isFollowing boolean into return list
+        const transformFollowingList = followingList.following.map(
+          ({ followers, ...restFollower }) => {
+            const isFollowing = followers.some(
+              (eachUserInFollowers) => eachUserInFollowers.userId === userId,
+            );
+            return {
+              ...restFollower,
+              isFollowing,
+            };
           },
-        }),
-      ]);
+        );
 
-      // * Add isFollowing boolean into return list
-      const transformFollowingList = followingList.following.map(
-        ({ followers, ...restFollower }) => {
-          const isFollowing = followers.some(
-            (eachUserInFollowers) => eachUserInFollowers.userId === userId,
-          );
-          return {
-            ...restFollower,
-            isFollowing,
-          };
-        },
-      );
-
-      const returnObject = {
-        count: totalFollowing._count.following,
-        rows: transformFollowingList,
-        limit: limit ?? 0,
-        offset: offset ?? 20,
-      };
-
-      return returnObject;
+        const returnObject = {
+          count: totalFollowing._count.following,
+          rows: transformFollowingList,
+          limit: limit ?? 0,
+          offset: offset ?? 20,
+        };
+        await this.redis.setRedisValue(
+          `gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query)}`,
+          returnObject,
+        );
+        return returnObject;
+      }
     } catch (err) {
       console.log(err);
       throw err;
