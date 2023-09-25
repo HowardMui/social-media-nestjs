@@ -32,7 +32,7 @@ export class SearchService {
           });
         case SearchType.latest:
         default:
-          return await this.prisma.post.findMany({
+          const latestPostList = await this.prisma.post.findMany({
             where: {
               OR: [
                 {
@@ -57,8 +57,29 @@ export class SearchService {
             take: limit || 20,
             include: {
               tags: true,
+              user: true,
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostedByUser: true,
+                },
+              },
             },
           });
+
+          const transformedPosts = latestPostList.map(
+            ({ _count, tags, ...post }) => ({
+              ...post,
+              tags: tags.map((t) => t.tagName),
+              likedCount: _count.likedByUser,
+              commentCount: _count.comments,
+              bookmarkedCount: _count.bookmarkedByUser,
+              rePostedCount: _count.rePostedByUser,
+            }),
+          );
+          return transformedPosts;
         case SearchType.tag:
           const findPostWithTagName = await this.prisma.tag.findMany({
             where: {
@@ -71,6 +92,18 @@ export class SearchService {
             take: limit || 20,
             select: {
               posts: {
+                include: {
+                  tags: true,
+                  user: true,
+                  _count: {
+                    select: {
+                      likedByUser: true,
+                      comments: true,
+                      bookmarkedByUser: true,
+                      rePostedByUser: true,
+                    },
+                  },
+                },
                 orderBy: { createdAt: 'desc' },
               },
             },
@@ -82,7 +115,17 @@ export class SearchService {
               (post, index, setArr) =>
                 setArr.findIndex((item) => item.postId === post.postId) ===
                 index,
-            );
+            )
+            .map(({ _count, tags, ...post }) => {
+              return {
+                ...post,
+                tags: tags.map((t) => t.tagName),
+                likedCount: _count.likedByUser,
+                commentCount: _count.comments,
+                bookmarkedCount: _count.bookmarkedByUser,
+                rePostedCount: _count.rePostedByUser,
+              };
+            });
 
           return tempFilter;
       }
