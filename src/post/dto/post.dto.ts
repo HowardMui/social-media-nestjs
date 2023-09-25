@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 
 import { QueryParamsWithFilter, TimeStamp } from 'src/types';
-import { UserResponse } from 'src/user/dto';
+import { UserResponse, UserResponseExampleDTO } from 'src/user/dto';
 
 export class GetPostQueryParamsWithFilter extends QueryParamsWithFilter {
   @ApiProperty()
@@ -17,42 +17,33 @@ export class GetPostQueryParamsWithFilter extends QueryParamsWithFilter {
 }
 
 export class PostResponse extends TimeStamp {
-  // @ApiProperty()
   postId: number;
-
-  // @ApiProperty()
-  // @IsString()
   image?: string;
-
-  // @ApiProperty()
-  // @IsString()
   content: string;
-
-  // @ApiProperty()
-  // impression: number;
-
-  // @ApiProperty()
   userId: number;
   user: UserResponse;
-  // user;
-  // @ApiProperty()
-  // numOfUserRePost: number;
-  // listUserRePost;
-  // @ApiProperty()
-  // numOfUserLikes: number;
-
-  // likedByUser;
-  // tags;
-  // comments;
-  // bookmarkedByUser;
-  // @ApiProperty()
-
   tags: string[];
   likedCount: number;
   commentCount: number;
   bookmarkedCount: number;
   rePostedCount: number;
 }
+
+export const PostResponseExampleDTO = {
+  postId: 0,
+  image: 'www.example.com',
+  content: 'string',
+  userId: 0,
+  user: { ...UserResponseExampleDTO },
+  tags: ['test tag'],
+  likedCount: 0,
+  commentCount: 0,
+  bookmarkedCount: 0,
+  rePostedCount: 0,
+  createdAt: 'string',
+  updatedAt: 'string',
+  deletedAt: 'string',
+};
 
 export class CreatePostDTO {
   @ApiProperty()
