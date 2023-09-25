@@ -6,9 +6,9 @@ import { PaginationQueryParams } from 'src/types';
 // type UserRole = 'Admin' | 'Moderator' | 'User';
 
 export enum RecommendationType {
-  user = 'user',
-  tag = 'tag',
-  post = 'post',
+  用戶 = 'user',
+  標籤 = 'tag',
+  帖文 = 'post',
   // recommended = 'recommended',
 }
 
@@ -24,7 +24,7 @@ export class GetRecommendationQueryParamsWithFilter extends PaginationQueryParam
 
   @ApiProperty({
     required: false,
-    default: RecommendationType.post,
+    default: RecommendationType.帖文,
     enum: RecommendationType,
   })
   @IsEnum(RecommendationType)

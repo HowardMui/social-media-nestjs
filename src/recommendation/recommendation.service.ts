@@ -14,7 +14,7 @@ export class RecommendationService {
 
     try {
       switch (type) {
-        case RecommendationType.user:
+        case RecommendationType.用戶:
           // * base on the given weights and sort by the total score
           const recommentedUsers = await this.prisma.$queryRaw`
           SELECT u.*,
@@ -56,12 +56,24 @@ export class RecommendationService {
         `;
           return recommentedUsers;
 
-        case RecommendationType.post:
+        case RecommendationType.帖文:
         default:
+
+            // const test = await this.prisma.$queryRaw`
+            // SELECT p.*, pu.* FROM "Post" p
+            // LEFT JOIN (
+            //   SELECT *
+            //   FROM "User"
+            // ) pu ON pu."userId" = p."userId"
+            // `
+
+            // console.log(test)
+
           const posts = await this.prisma.$queryRaw`
            SELECT
               p.*,
               pt."tags",
+              pu.* AS "user",
               COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
               COALESCE(lc.likesCount::integer, 0) AS "likesCount",
               COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount",
@@ -94,6 +106,10 @@ export class RecommendationService {
               LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
                 GROUP BY p."postId"
             ) pt ON pt."postId" = p."postId"
+            -- LEFT JOIN (
+            --   SELECT *
+            --   FROM "User"
+            -- ) pu ON pu."userId" = p."userId"
             ORDER BY
             "score" DESC
             LIMIT ${limit || 20}
@@ -107,7 +123,7 @@ export class RecommendationService {
           };
 
           return returnObject;
-        case RecommendationType.tag:
+        case RecommendationType.標籤:
           const tagWeight = await this.prisma.$queryRaw`
             SELECT t."tagName", t."tagId", COUNT(p."postId")::integer AS "postCount"
             FROM "Tag" AS t
