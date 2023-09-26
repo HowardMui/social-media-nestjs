@@ -11,7 +11,7 @@ export class GetUserListQueryParams extends QueryParamsWithFilter {
 export class UserResponse extends TimeStamp {
   userId: number;
   firstName: string;
-  LastName: string;
+  lastName: string;
   email: string;
   userName: string;
   image: string;
@@ -23,7 +23,7 @@ export class UserResponse extends TimeStamp {
 export const UserResponseExampleDTO: UserResponse = {
   userId: 0,
   firstName: 'Howard',
-  LastName: 'Mui',
+  lastName: 'Mui',
   email: 'example@gmail.com',
   userName: 'HowardMui',
   image: 'www.example.com',
