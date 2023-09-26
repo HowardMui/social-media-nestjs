@@ -34,6 +34,12 @@ export class ListResponse<T> {
   offset: number;
 }
 
+export class ListResponseWithoutCount<T> {
+  rows: T[];
+  limit: number;
+  offset: number;
+}
+
 export class TimeStamp {
   createdAt: string;
   updatedAt: string;

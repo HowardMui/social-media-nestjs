@@ -23,6 +23,8 @@ export const formatDataToRedis = <T>(filter: T): string => {
       case 'userName':
         queryString += `-u:${value}`;
         break;
+      case 'type':
+        queryString += `-t:${value}`;
     }
   }
   return queryString;
