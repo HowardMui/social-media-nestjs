@@ -74,30 +74,6 @@ export class PostController {
     return this.postService.deleteOnePost(postId);
   }
 
-  // * Like a post ------------------------------------------------------------------------------------
-
-  @Post(':postId/like')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({ summary: 'Like a post. App User only' })
-  likeAPost(
-    @Param('postId', new ParseIntPipe()) postId: number,
-    @Req() req: Request,
-  ) {
-    return this.postService.likeAPostByUser(postId, req.user['userId']);
-  }
-
-  @Delete(':postId/like')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({ summary: 'UnLike a post. App User only' })
-  unLikeAPost(
-    @Param('postId', new ParseIntPipe()) postId: number,
-    @Req() req: Request,
-  ) {
-    return this.postService.unLikeAPost(postId, req.user['userId']);
-  }
-
   // * Share a post to current User Blog ------------------------------------------------------------------------------------
 
   @Post(':postId/repost')
