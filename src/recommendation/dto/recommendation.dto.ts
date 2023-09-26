@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
-import { PostResponse } from 'src/post/dto';
 import { PaginationQueryParams } from 'src/types';
 
 // type UserRole = 'Admin' | 'Moderator' | 'User';
@@ -29,8 +28,4 @@ export class GetRecommendationQueryParamsWithFilter extends PaginationQueryParam
   })
   @IsEnum(RecommendationType)
   type?: RecommendationType;
-}
-
-export class RecommendationPostResponse extends PostResponse {
-  score: number;
 }
