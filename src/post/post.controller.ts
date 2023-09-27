@@ -73,37 +73,4 @@ export class PostController {
   deleteUserPost(@Param('postId', new ParseIntPipe()) postId: number) {
     return this.postService.deleteOnePost(postId);
   }
-
-  // * Share a post to current User Blog ------------------------------------------------------------------------------------
-
-  @Post(':postId/repost')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({
-    summary: 'RePost a post to current User blog. App User only',
-  })
-  rePostToCurrentUserBlog(
-    @Param('postId', new ParseIntPipe()) postId: number,
-    @Req() req: Request,
-  ) {
-    return this.postService.rePostAPostToCurrentUserBlog(
-      postId,
-      req.user['userId'],
-    );
-  }
-
-  // * cancel a post to current User Blog ------------------------------------------------------------------------------------
-
-  @Delete(':postId/repost')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({
-    summary: 'Cancel RePost a post. App User only',
-  })
-  cancelRePostAPost(
-    @Param('postId', new ParseIntPipe()) postId: number,
-    @Req() req: Request,
-  ) {
-    return this.postService.cancelRePostAPost(postId, req.user['userId']);
-  }
 }

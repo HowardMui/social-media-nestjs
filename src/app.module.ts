@@ -15,6 +15,8 @@ import { TagModule } from './tag/tag.module';
 import { SearchModule } from './search/search.module';
 import { CronjobsModule } from './cronjobs/cronjobs.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
+import { LikePostModule } from './like-post/like-post.module';
+import { SharePostModule } from './share-post/share-post.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
     SearchModule,
     CronjobsModule,
     RateLimitModule,
+    LikePostModule,
+    SharePostModule,
   ],
   controllers: [AppController],
   providers: [AppService],

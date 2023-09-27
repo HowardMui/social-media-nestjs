@@ -15,7 +15,7 @@ import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { Request } from 'express';
 
 @ApiTags('Posts')
-@Controller('like-post')
+@Controller('posts')
 export class LikePostController {
   constructor(private likeService: LikePostService) {}
 
