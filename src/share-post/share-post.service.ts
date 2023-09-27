@@ -13,13 +13,23 @@ export class SharePostService {
 
   async rePostAPostToCurrentUserBlog(postId: number, userId: number) {
     try {
-      await this.prisma.userRePost.create({
-        data: {
-          postId,
-          userId,
-        },
-      });
-
+      await this.prisma.$transaction([
+        this.prisma.userRePost.create({
+          data: {
+            postId,
+            userId,
+          },
+        }),
+        // * Update the updatedAt field in the Post model
+        this.prisma.post.update({
+          where: {
+            postId,
+          },
+          data: {
+            updatedAt: new Date(),
+          },
+        }),
+      ]);
       return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
@@ -33,14 +43,25 @@ export class SharePostService {
 
   async cancelRePostAPost(postId: number, userId: number) {
     try {
-      await this.prisma.userRePost.delete({
-        where: {
-          postId_userId: {
-            postId,
-            userId,
+      await this.prisma.$transaction([
+        this.prisma.userRePost.delete({
+          where: {
+            postId_userId: {
+              postId,
+              userId,
+            },
           },
-        },
-      });
+        }),
+        // * Update the updatedAt field in the Post model
+        this.prisma.post.update({
+          where: {
+            postId,
+          },
+          data: {
+            updatedAt: new Date(),
+          },
+        }),
+      ]);
       return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
