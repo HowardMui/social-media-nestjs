@@ -165,4 +165,19 @@ export class MeController {
   ) {
     return this.userProfileService.getAllMeComment(query, req.user['userId']);
   }
+
+  @Get('posts/following')
+  @ApiOkResponsePaginated(GetMePostResponse)
+  @ApiOperation({ summary: "List following user's posts. App User Only" })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  getAllMeFollowingPost(
+    @Query() query: GetMePostQueryParams,
+    @Req() req: Request,
+  ) {
+    return this.userProfileService.getAllMeFollowingPostList(
+      query,
+      req.user['userId'],
+    );
+  }
 }

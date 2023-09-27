@@ -512,138 +512,219 @@ export class MeService {
     const { limit, offset } = query;
 
     try {
-      // * gamp = get all my posts
-      const cachedAllMePostData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(`gamp${formatDataToRedis<GetMePostQueryParams>(query)}`);
-      if (cachedAllMePostData) {
-        return cachedAllMePostData;
-      } else {
-        const postsQuery = await this.prisma.$queryRaw<
-          { count: number; rows: PostResponse[] }[]
-        >`
-            WITH "Posts" AS (
-              SELECT "Post".*, pt."tags",
-                COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
-                COALESCE(lc.likesCount::integer, 0) AS "likesCount",
-                COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
-              FROM "User"
-              LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
-              LEFT JOIN "Post" ON "Post"."postId" = "user_rePost_posts"."postId"
-              LEFT JOIN (
-                SELECT "Post"."postId", 
-                  CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
-                    ELSE '[]' END AS "tags"
-                FROM "Post"
-                LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-                LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-                GROUP BY "Post"."postId"
-              ) pt ON pt."postId" = "Post"."postId"
-              LEFT JOIN (
-                SELECT
-                  "postId",
-                  COUNT(*) AS commentsCount
-                FROM
-                  "Comment"
-                GROUP BY
-                  "postId"
-              ) pc ON pc."postId" = "Post"."postId"
-              LEFT JOIN (
-                SELECT
-                  "postId",
-                  COUNT(*) AS likesCount
-                FROM
-                  "user_liked_posts"
-                GROUP BY
-                  "postId"
-              ) lc ON lc."postId" = "Post"."postId"
-              LEFT JOIN (
-                SELECT
-                  "postId",
-                  COUNT(*) AS rePostsCount
-                FROM
-                  "user_rePost_posts"
-                GROUP BY
-                  "postId"
-              ) rc ON rc."postId" = "Post"."postId"
-              WHERE "User"."userId" = ${userId}
-              -- // * UNION All (Combine two different table and query)
-              UNION ALL
-              SELECT "Post".*, pt."tags",
-                COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
-                COALESCE(lc.likesCount::integer, 0) AS "likesCount",
-                COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
-              FROM "User"
-              LEFT JOIN "Post" ON "Post"."userId" = "User"."userId"
-              LEFT JOIN (
-                SELECT "Post"."postId", 
-                  CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
-                    ELSE '[]' END AS "tags"
-                FROM "Post"
-                LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-                LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-                GROUP BY "Post"."postId"
-              ) pt ON pt."postId" = "Post"."postId"
-              LEFT JOIN (
-                SELECT
-                  "postId",
-                  COUNT(*) AS commentsCount
-                FROM
-                  "Comment"
-                GROUP BY
-                  "postId"
-              ) pc ON pc."postId" = "Post"."postId"
-              LEFT JOIN (
-                SELECT
-                  "postId",
-                  COUNT(*) AS likesCount
-                FROM
-                  "user_liked_posts"
-                GROUP BY
-                  "postId"
-              ) lc ON lc."postId" = "Post"."postId"
-              LEFT JOIN (
-                SELECT
-                  "postId",
-                  COUNT(*) AS rePostsCount
-                FROM
-                  "user_rePost_posts"
-                GROUP BY
-                  "postId"
-              ) rc ON rc."postId" = "Post"."postId"
-              WHERE "User"."userId" = ${userId}
-              -- ORDER BY "createdAt" DESC
-              -- LIMIT ${limit || 20}
-              -- OFFSET ${offset || 0}
-            ),
-            -- // * find out the query and filter it
-            "PaginatedPosts" AS (
-              SELECT *
-              FROM "Posts"
-              ORDER BY "createdAt" DESC
-              LIMIT ${limit || 20}
-              OFFSET ${offset || 0}
-            ),
-            -- // * reform the the data into rows and count (count form the Posts -> avoid involve into the pagination)
-            "AggregatedPosts" AS (
-              SELECT json_agg("PaginatedPosts") AS "rows", (SELECT COUNT(*) FROM "Posts")::integer AS "count"
-              FROM "PaginatedPosts"
-            )
-            SELECT "count", "rows"
-            FROM "AggregatedPosts";
-          `;
-        const returnAllPostObject = {
-          count: postsQuery[0].count,
-          rows: postsQuery[0].rows,
-          limit: limit ?? 20,
-          offset: offset ?? 0,
-        };
-        await this.redis.setRedisValue(
-          `gamp${formatDataToRedis<GetMePostQueryParams>(query)}`,
-          returnAllPostObject,
-        );
-        return returnAllPostObject;
-      }
+      // // * gamp = get all my posts
+      // const cachedAllMePostData = await this.redis.getRedisValue<
+      //   ListResponse<PostResponse>
+      // >(`gamp${formatDataToRedis<GetMePostQueryParams>(query)}`);
+      // if (cachedAllMePostData) {
+      //   return cachedAllMePostData;
+      // } else {
+      //   const postsQuery = await this.prisma.$queryRaw<
+      //     { count: number; rows: PostResponse[] }[]
+      //   >`
+      //       WITH "Posts" AS (
+      //         SELECT "Post".*, pt."tags",
+      //           COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
+      //           COALESCE(lc.likesCount::integer, 0) AS "likesCount",
+      //           COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
+      //         FROM "User"
+      //         LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
+      //         LEFT JOIN "Post" ON "Post"."postId" = "user_rePost_posts"."postId"
+      //         LEFT JOIN (
+      //           SELECT "Post"."postId",
+      //             CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
+      //               ELSE '[]' END AS "tags"
+      //           FROM "Post"
+      //           LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
+      //           LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
+      //           GROUP BY "Post"."postId"
+      //         ) pt ON pt."postId" = "Post"."postId"
+      //         LEFT JOIN (
+      //           SELECT
+      //             "postId",
+      //             COUNT(*) AS commentsCount
+      //           FROM
+      //             "Comment"
+      //           GROUP BY
+      //             "postId"
+      //         ) pc ON pc."postId" = "Post"."postId"
+      //         LEFT JOIN (
+      //           SELECT
+      //             "postId",
+      //             COUNT(*) AS likesCount
+      //           FROM
+      //             "user_liked_posts"
+      //           GROUP BY
+      //             "postId"
+      //         ) lc ON lc."postId" = "Post"."postId"
+      //         LEFT JOIN (
+      //           SELECT
+      //             "postId",
+      //             COUNT(*) AS rePostsCount
+      //           FROM
+      //             "user_rePost_posts"
+      //           GROUP BY
+      //             "postId"
+      //         ) rc ON rc."postId" = "Post"."postId"
+      //         WHERE "User"."userId" = ${userId}
+      //         -- // * UNION All (Combine two different table and query)
+      //         UNION ALL
+      //         SELECT "Post".*, pt."tags",
+      //           COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
+      //           COALESCE(lc.likesCount::integer, 0) AS "likesCount",
+      //           COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
+      //         FROM "User"
+      //         LEFT JOIN "Post" ON "Post"."userId" = "User"."userId"
+      //         LEFT JOIN (
+      //           SELECT "Post"."postId",
+      //             CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
+      //               ELSE '[]' END AS "tags"
+      //           FROM "Post"
+      //           LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
+      //           LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
+      //           GROUP BY "Post"."postId"
+      //         ) pt ON pt."postId" = "Post"."postId"
+      //         LEFT JOIN (
+      //           SELECT
+      //             "postId",
+      //             COUNT(*) AS commentsCount
+      //           FROM
+      //             "Comment"
+      //           GROUP BY
+      //             "postId"
+      //         ) pc ON pc."postId" = "Post"."postId"
+      //         LEFT JOIN (
+      //           SELECT
+      //             "postId",
+      //             COUNT(*) AS likesCount
+      //           FROM
+      //             "user_liked_posts"
+      //           GROUP BY
+      //             "postId"
+      //         ) lc ON lc."postId" = "Post"."postId"
+      //         LEFT JOIN (
+      //           SELECT
+      //             "postId",
+      //             COUNT(*) AS rePostsCount
+      //           FROM
+      //             "user_rePost_posts"
+      //           GROUP BY
+      //             "postId"
+      //         ) rc ON rc."postId" = "Post"."postId"
+      //         WHERE "User"."userId" = ${userId}
+      //         -- ORDER BY "createdAt" DESC
+      //         -- LIMIT ${limit || 20}
+      //         -- OFFSET ${offset || 0}
+      //       ),
+      //       -- // * find out the query and filter it
+      //       "PaginatedPosts" AS (
+      //         SELECT *
+      //         FROM "Posts"
+      //         ORDER BY "createdAt" DESC
+      //         LIMIT ${limit || 20}
+      //         OFFSET ${offset || 0}
+      //       ),
+      //       -- // * reform the the data into rows and count (count form the Posts -> avoid involve into the pagination)
+      //       "AggregatedPosts" AS (
+      //         SELECT json_agg("PaginatedPosts") AS "rows", (SELECT COUNT(*) FROM "Posts")::integer AS "count"
+      //         FROM "PaginatedPosts"
+      //       )
+      //       SELECT "count", "rows"
+      //       FROM "AggregatedPosts";
+      //     `;
+      //   const returnAllPostObject = {
+      //     count: postsQuery[0].count,
+      //     rows: postsQuery[0].rows,
+      //     limit: limit ?? 20,
+      //     offset: offset ?? 0,
+      //   };
+      //   await this.redis.setRedisValue(
+      //     `gamp${formatDataToRedis<GetMePostQueryParams>(query)}`,
+      //     returnAllPostObject,
+      //   );
+      //   return returnAllPostObject;
+      // }
+
+      const [postCount, followingUserPostList] = await this.prisma.$transaction(
+        [
+          this.prisma.post.count({
+            where: {
+              OR: [
+                {
+                  userId,
+                },
+                {
+                  rePostedByUser: {
+                    some: {
+                      userId,
+                    },
+                  },
+                },
+              ],
+            },
+          }),
+          // ! Cannot get exact rePost user object, only can get the rePostUser array and return the first one
+          this.prisma.post.findMany({
+            where: {
+              OR: [
+                {
+                  userId,
+                },
+                {
+                  rePostedByUser: {
+                    some: {
+                      userId,
+                    },
+                  },
+                },
+              ],
+            },
+            include: {
+              tags: true,
+              user: true,
+              rePostedByUser: {
+                select: {
+                  user: true,
+                },
+                take: 1,
+              },
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostedByUser: true,
+                },
+              },
+            },
+            orderBy: {
+              updatedAt: 'desc',
+            },
+            skip: offset ?? 0,
+            take: limit ?? 20,
+          }),
+        ],
+      );
+
+      const transformedPosts = followingUserPostList.map(
+        ({ _count, tags, rePostedByUser, ...post }) => ({
+          ...post,
+          tags: tags.map((t) => t.tagName),
+          likedCount: _count.likedByUser,
+          commentCount: _count.comments,
+          bookmarkedCount: _count.bookmarkedByUser,
+          rePostedCount: _count.rePostedByUser,
+          rePostedByUser: rePostedByUser.map((u) => u.user),
+        }),
+      );
+
+      const returnObject = {
+        count: postCount,
+        rows: transformedPosts,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
+      };
+      return returnObject;
     } catch (err) {
       console.log(err);
     }
@@ -720,6 +801,118 @@ export class MeService {
         );
         return returnCommentWithPostObject;
       }
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async getAllMeFollowingPostList(query: GetMePostQueryParams, userId: number) {
+    const { limit, offset } = query;
+    try {
+      const [postCount, followingUserPostList] = await this.prisma.$transaction(
+        [
+          this.prisma.post.count({
+            where: {
+              OR: [
+                {
+                  user: {
+                    followers: {
+                      some: {
+                        userId,
+                      },
+                    },
+                  },
+                },
+                {
+                  rePostedByUser: {
+                    some: {
+                      user: {
+                        followers: {
+                          some: {
+                            userId,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          }),
+          // ! Cannot get exact rePost user object, only can get the rePostUser array and return the first one
+          this.prisma.post.findMany({
+            where: {
+              OR: [
+                {
+                  user: {
+                    followers: {
+                      some: {
+                        userId,
+                      },
+                    },
+                  },
+                },
+                {
+                  rePostedByUser: {
+                    some: {
+                      user: {
+                        followers: {
+                          some: {
+                            userId,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+            include: {
+              tags: true,
+              user: true,
+              rePostedByUser: {
+                select: {
+                  user: true,
+                },
+                take: 1,
+              },
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostedByUser: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            skip: offset ?? 0,
+            take: limit ?? 20,
+          }),
+        ],
+      );
+
+      const transformedPosts = followingUserPostList.map(
+        ({ _count, tags, rePostedByUser, ...post }) => ({
+          ...post,
+          tags: tags.map((t) => t.tagName),
+          likedCount: _count.likedByUser,
+          commentCount: _count.comments,
+          bookmarkedCount: _count.bookmarkedByUser,
+          rePostedCount: _count.rePostedByUser,
+          rePostedByUser: rePostedByUser.map((u) => u.user),
+        }),
+      );
+
+      const returnObject = {
+        count: postCount,
+        rows: transformedPosts,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
+      };
+      return returnObject;
     } catch (err) {
       console.log(err);
     }
