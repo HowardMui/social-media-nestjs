@@ -17,6 +17,7 @@ import { CronjobsModule } from './cronjobs/cronjobs.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { LikePostModule } from './like-post/like-post.module';
 import { SharePostModule } from './share-post/share-post.module';
+import { FollowUserActionModule } from './follow-user-action/follow-user-action.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { SharePostModule } from './share-post/share-post.module';
     RateLimitModule,
     LikePostModule,
     SharePostModule,
+    FollowUserActionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
