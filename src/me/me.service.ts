@@ -645,6 +645,77 @@ export class MeService {
       //   return returnAllPostObject;
       // }
 
+      const testGetAll = await this.prisma.userPostOrder.findMany({
+        where: {
+          userId,
+          NOT:[
+            {
+              post: null
+            },
+            {
+              rePost: null
+            }
+          ]
+        },
+        select: {
+          post: true,
+          rePost: true,
+        },
+        // select: {
+        //   post: {
+        //     include: {
+        //       tags: true,
+        //       user: true,
+        //       rePostedByUser: {
+        //         select: {
+        //           user: true,
+        //         },
+        //         take: 1,
+        //       },
+        //       _count: {
+        //         select: {
+        //           likedByUser: true,
+        //           comments: true,
+        //           bookmarkedByUser: true,
+        //           // rePostedByUser: true,
+        //         },
+        //       },
+        //     },
+        //   },
+        //   rePost: {
+        //     include: {
+        //       tags: true,
+        //       user: true,
+        //       rePostedByUser: {
+        //         select: {
+        //           user: true,
+        //         },
+        //         take: 1,
+        //       },
+        //     },
+        //   },
+        // },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // const transformPostList = testGetAll.map(({ post }) => {
+      //   const { _count, tags, rePostedByUser, ...rest } = post;
+      //   return {
+      //     ...rest,
+      //     tags: tags.map((t) => t.tagName),
+      //     likedCount: _count.likedByUser,
+      //     commentCount: _count.comments,
+      //     bookmarkedCount: _count.bookmarkedByUser,
+      //     // rePostedCount: _count.rePostedByUser,
+      //     rePostedByUser: rePostedByUser[0],
+      //   };
+      // });
+
+      // return transformPostList;
+      return testGetAll;
+
       const [postCount, followingUserPostList] = await this.prisma.$transaction(
         [
           this.prisma.post.count({

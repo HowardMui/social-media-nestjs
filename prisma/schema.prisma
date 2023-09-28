@@ -45,6 +45,7 @@ model User {
   followers User[] @relation(name: "Followers")
   following   User[]  @relation(name: "Followers")
   UserAuths UserAuth[]
+  userPostOrder UserPostOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -103,7 +104,9 @@ model Post{
   likedByUser   UserLikedPost[]
   tags Tag[] @relation(name: "PostTags")
   comments       Comment[]
-  bookmarkedByUser UserBookmark[] 
+  bookmarkedByUser UserBookmark[]
+  postOrderByUser UserPostOrder[] @relation(name: "UserPostOrder_Repost")
+  rePostOrderByUser UserPostOrder[] @relation(name: "UserPostOrder_Post")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -161,11 +164,31 @@ model UserBookmark{
 }
 
 model UserRePost {
+  // rePostId Int @id @default(autoincrement())
   postId Int
   post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
   userId Int
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@id([postId, userId])
+  // @@id([userId])
   @@map("user_rePost_posts")
+}
+
+model UserPostOrder {
+  id Int @id @default(autoincrement())
+  postId Int?
+  rePostId Int?
+  post Post? @relation(name: "UserPostOrder_Post", fields: [postId], references: [postId], onDelete: Cascade)
+  rePost Post? @relation(name: "UserPostOrder_Repost", fields: [rePostId], references: [postId], onDelete: Cascade)
+  userId Int
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime @default(now())
+
+  // @@id([postId, repostId, userId])
+  // @@id([postId, repostId, userId])
+  // @@unique([userId, id])
+  // @@unique([postId, repostId, userId, id])
 }
