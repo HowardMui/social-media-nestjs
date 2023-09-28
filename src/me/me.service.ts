@@ -648,53 +648,38 @@ export class MeService {
       const testGetAll = await this.prisma.userPostOrder.findMany({
         where: {
           userId,
-          NOT:[
-            {
-              post: null
+        },
+        include: {
+          post: {
+            include: {
+              tags: true,
+              user: true,
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostOrderByUser: true,
+                },
+              },
             },
-            {
-              rePost: null
-            }
-          ]
+          },
+          rePost: {
+            include: {
+              tags: true,
+              user: true,
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostOrderByUser: true,
+                },
+              },
+            },
+          },
+          user: true,
         },
-        select: {
-          post: true,
-          rePost: true,
-        },
-        // select: {
-        //   post: {
-        //     include: {
-        //       tags: true,
-        //       user: true,
-        //       rePostedByUser: {
-        //         select: {
-        //           user: true,
-        //         },
-        //         take: 1,
-        //       },
-        //       _count: {
-        //         select: {
-        //           likedByUser: true,
-        //           comments: true,
-        //           bookmarkedByUser: true,
-        //           // rePostedByUser: true,
-        //         },
-        //       },
-        //     },
-        //   },
-        //   rePost: {
-        //     include: {
-        //       tags: true,
-        //       user: true,
-        //       rePostedByUser: {
-        //         select: {
-        //           user: true,
-        //         },
-        //         take: 1,
-        //       },
-        //     },
-        //   },
-        // },
         orderBy: {
           createdAt: 'desc',
         },
