@@ -105,8 +105,8 @@ model Post{
   tags Tag[] @relation(name: "PostTags")
   comments       Comment[]
   bookmarkedByUser UserBookmark[]
-  postOrderByUser UserPostOrder[] @relation(name: "UserPostOrder_Repost")
-  rePostOrderByUser UserPostOrder[] @relation(name: "UserPostOrder_Post")
+  postOrderByUser UserPostOrder[] @relation(name: "UserPostOrder_Post")
+  rePostOrderByUser UserPostOrder[] @relation(name: "UserPostOrder_Repost")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
