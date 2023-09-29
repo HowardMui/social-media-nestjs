@@ -35,3 +35,17 @@ export const returnAscOrDescInQueryParamsWithFilter = (
 
   return tempObject;
 };
+
+export const formatListResponseObject = <T>(
+  count: number,
+  rows: T,
+  limit?: number,
+  offset?: number,
+) => {
+  return {
+    count,
+    rows,
+    limit: limit ?? 20,
+    offset: offset ?? 0,
+  };
+};
