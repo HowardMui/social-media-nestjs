@@ -15,18 +15,18 @@ export class FollowUserActionService {
         return new BadRequestException('Cannot follow yourself');
       }
 
-      await this.prisma.user.update({
-        where: {
-          userId: wannaFollowId,
-        },
-        data: {
-          followers: {
-            connect: {
-              userId: currentUserId,
-            },
-          },
-        },
-      });
+      // await this.prisma.user.update({
+      //   where: {
+      //     userId: wannaFollowId,
+      //   },
+      //   data: {
+      //     followers: {
+      //       connect: {
+      //         userId: currentUserId,
+      //       },
+      //     },
+      //   },
+      // });
       return HttpStatus.CREATED;
     } catch (err) {
       console.log(err);
@@ -42,18 +42,18 @@ export class FollowUserActionService {
         return new BadRequestException('Cannot unfollow yourself');
       }
 
-      await this.prisma.user.update({
-        where: {
-          userId: wannaUnFollowId,
-        },
-        data: {
-          followers: {
-            disconnect: {
-              userId: currentUserId,
-            },
-          },
-        },
-      });
+      // await this.prisma.user.update({
+      //   where: {
+      //     userId: wannaUnFollowId,
+      //   },
+      //   data: {
+      //     followers: {
+      //       disconnect: {
+      //         userId: currentUserId,
+      //       },
+      //     },
+      //   },
+      // });
       return HttpStatus.OK;
     } catch (err) {
       console.log(err);

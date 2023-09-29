@@ -42,8 +42,8 @@ model User {
   likedPosts   UserLikedPost[]
   bookmarkedPosts UserBookmark[] 
   comments       Comment[]
-  followers User[] @relation(name: "Followers")
-  following   User[]  @relation(name: "Followers")
+  followers Follows[] @relation("following")
+  following Follows[] @relation("follower")
   UserAuths UserAuth[]
   userPostOrder UserPostOrder[]
 
@@ -190,4 +190,13 @@ model UserPostOrder {
   // @@id([postId, repostId, userId])
   // @@unique([userId, id])
   // @@unique([postId, repostId, userId, id])
+}
+
+model Follows {
+  follower    User @relation("follower", fields: [followerId], references: [userId])
+  followerId  Int
+  following   User @relation("following", fields: [followingId], references: [userId])
+  followingId Int
+
+  @@id([followerId, followingId])
 }
