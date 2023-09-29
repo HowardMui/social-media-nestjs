@@ -176,7 +176,7 @@ model UserRePost {
 }
 
 model UserPostOrder {
-  id Int @id @default(autoincrement())
+  orderListId Int @id @default(autoincrement())
   postId Int?
   rePostId Int?
   post Post? @relation(name: "UserPostOrder_Post", fields: [postId], references: [postId], onDelete: Cascade)
@@ -185,7 +185,6 @@ model UserPostOrder {
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime? @updatedAt
-  deletedAt DateTime @default(now())
 
   // @@id([postId, repostId, userId])
   // @@id([postId, repostId, userId])
