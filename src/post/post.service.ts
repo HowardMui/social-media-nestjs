@@ -187,28 +187,39 @@ export class PostService {
         );
       }
 
-      // * Create a new post
-      await this.prisma.post.create({
-        data: {
-          ...postBody,
-          userId,
-          tags:
-            tagName && tagName.length > 0
-              ? {
-                  connect: existedTags.map((tag) => ({
-                    tagName: tag.tagName,
-                  })),
-                  create: willBeCreatedTag.map((tag) => ({
-                    tagName: tag,
-                  })),
-                }
-              : undefined,
-        },
-        include: {
-          tags: true,
-        },
-      });
+      await this.prisma.$transaction(async (tx) => {
+        // * Create a new post
+        const createdPost = await tx.post.create({
+          data: {
+            ...postBody,
+            userId,
+            tags:
+              tagName && tagName.length > 0
+                ? {
+                    connect: existedTags.map((tag) => ({
+                      tagName: tag.tagName,
+                    })),
+                    create: willBeCreatedTag.map((tag) => ({
+                      tagName: tag,
+                    })),
+                  }
+                : undefined,
+          },
+          include: {
+            tags: true,
+            postOrderByUser: true,
+          },
+        });
 
+        if (createdPost) {
+          await tx.userPostOrder.create({
+            data: {
+              postId: createdPost.postId,
+              userId,
+            },
+          });
+        }
+      });
       return HttpStatus.CREATED;
     } catch (err) {
       console.log(err);

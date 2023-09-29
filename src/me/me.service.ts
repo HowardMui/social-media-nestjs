@@ -20,7 +20,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as _ from 'lodash';
 import { PostResponse } from 'src/post/dto';
 import { UpdateMeProfileDTO } from './dto/me-update-profile.dto';
-import { formatDevice } from 'src/helper';
+import { formatDevice, formatListResponseObject } from 'src/helper';
 import { RedisService } from 'src/redis/redis.service';
 import { ListResponse } from 'src/types';
 import { formatDataToRedis } from 'src/helper/format-data-to-redis';
@@ -513,6 +513,7 @@ export class MeService {
 
     try {
       // // * gamp = get all my posts
+      // ! Raw prisma sql query
       // const cachedAllMePostData = await this.redis.getRedisValue<
       //   ListResponse<PostResponse>
       // >(`gamp${formatDataToRedis<GetMePostQueryParams>(query)}`);
@@ -645,86 +646,156 @@ export class MeService {
       //   return returnAllPostObject;
       // }
 
-      const [postCount, followingUserPostList] = await this.prisma.$transaction(
-        [
-          this.prisma.post.count({
+      const cachedAllMePostData = await this.redis.getRedisValue<
+        ListResponse<PostResponse>
+      >(`gamp${formatDataToRedis<GetMePostQueryParams>(query)}`);
+      if (cachedAllMePostData) {
+        return cachedAllMePostData;
+      } else {
+        const [postCount, postList] = await this.prisma.$transaction([
+          this.prisma.userPostOrder.count({
             where: {
-              OR: [
-                {
-                  userId,
-                },
-                {
-                  rePostedByUser: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-              ],
+              userId,
             },
           }),
-          // ! Cannot get exact rePost user object, only can get the rePostUser array and return the first one
-          this.prisma.post.findMany({
+          this.prisma.userPostOrder.findMany({
             where: {
-              OR: [
-                {
-                  userId,
-                },
-                {
-                  rePostedByUser: {
-                    some: {
-                      userId,
+              userId,
+            },
+            include: {
+              post: {
+                include: {
+                  tags: {
+                    select: {
+                      tagName: true,
+                    },
+                  },
+                  user: true,
+                  _count: {
+                    select: {
+                      likedByUser: true,
+                      comments: true,
+                      bookmarkedByUser: true,
+                      rePostOrderByUser: true,
                     },
                   },
                 },
-              ],
-            },
-            include: {
-              tags: true,
-              user: true,
-              rePostedByUser: {
-                select: {
+              },
+              rePost: {
+                include: {
+                  tags: {
+                    select: {
+                      tagName: true,
+                    },
+                  },
                   user: true,
+                  _count: {
+                    select: {
+                      likedByUser: true,
+                      comments: true,
+                      bookmarkedByUser: true,
+                      rePostOrderByUser: true,
+                    },
+                  },
                 },
-                take: 1,
               },
-              _count: {
-                select: {
-                  likedByUser: true,
-                  comments: true,
-                  bookmarkedByUser: true,
-                  rePostedByUser: true,
-                },
-              },
+              user: true,
             },
             orderBy: {
-              updatedAt: 'desc',
+              createdAt: 'desc',
             },
             skip: offset ?? 0,
             take: limit ?? 20,
           }),
-        ],
-      );
+        ]);
+        await this.redis.setRedisValue(
+          `gamp${formatDataToRedis<GetMePostQueryParams>(query)}`,
+          formatListResponseObject(postCount, postList, limit, offset),
+        );
+        return formatListResponseObject(postCount, postList, limit, offset);
+      }
 
-      const transformedPosts = followingUserPostList.map(
-        ({ _count, tags, rePostedByUser, ...post }) => ({
-          ...post,
-          tags: tags.map((t) => t.tagName),
-          likedCount: _count.likedByUser,
-          commentCount: _count.comments,
-          bookmarkedCount: _count.bookmarkedByUser,
-          rePostedCount: _count.rePostedByUser,
-          rePostedByUser: rePostedByUser.map((u) => u.user),
-        }),
-      );
+      // ! Wrong prisma query with no ordering
+      // const [postCount, followingUserPostList] = await this.prisma.$transaction(
+      //   [
+      //     this.prisma.post.count({
+      //       where: {
+      //         OR: [
+      //           {
+      //             userId,
+      //           },
+      //           {
+      //             rePostedByUser: {
+      //               some: {
+      //                 userId,
+      //               },
+      //             },
+      //           },
+      //         ],
+      //       },
+      //     }),
+      //     // ! Cannot get exact rePost user object, only can get the rePostUser array and return the first one
+      //     this.prisma.post.findMany({
+      //       where: {
+      //         OR: [
+      //           {
+      //             userId,
+      //           },
+      //           {
+      //             rePostedByUser: {
+      //               some: {
+      //                 userId,
+      //               },
+      //             },
+      //           },
+      //         ],
+      //       },
+      //       include: {
+      //         tags: true,
+      //         user: true,
+      //         rePostedByUser: {
+      //           select: {
+      //             user: true,
+      //           },
+      //           take: 1,
+      //         },
+      //         _count: {
+      //           select: {
+      //             likedByUser: true,
+      //             comments: true,
+      //             bookmarkedByUser: true,
+      //             rePostedByUser: true,
+      //           },
+      //         },
+      //       },
+      //       orderBy: {
+      //         updatedAt: 'desc',
+      //       },
+      //       skip: offset ?? 0,
+      //       take: limit ?? 20,
+      //     }),
+      //   ],
+      // );
 
-      const returnObject = {
-        count: postCount,
-        rows: transformedPosts,
-        limit: limit ?? 20,
-        offset: offset ?? 0,
-      };
-      return returnObject;
+      // const transformedPosts = followingUserPostList.map(
+      //   ({ _count, tags, rePostedByUser, ...post }) => ({
+      //     ...post,
+      //     tags: tags.map((t) => t.tagName),
+      //     likedCount: _count.likedByUser,
+      //     commentCount: _count.comments,
+      //     bookmarkedCount: _count.bookmarkedByUser,
+      //     rePostedCount: _count.rePostedByUser,
+      //     rePostedByUser: rePostedByUser.map((u) => u.user),
+      //   }),
+      // );
+
+      // const returnObject = {
+      //   count: postCount,
+      //   rows: transformedPosts,
+      //   limit: limit ?? 20,
+      //   offset: offset ?? 0,
+      // };
+      // return returnObject;
     } catch (err) {
       console.log(err);
     }
@@ -809,110 +880,159 @@ export class MeService {
   async getAllMeFollowingPostList(query: GetMePostQueryParams, userId: number) {
     const { limit, offset } = query;
     try {
-      const [postCount, followingUserPostList] = await this.prisma.$transaction(
-        [
-          this.prisma.post.count({
-            where: {
-              OR: [
-                {
-                  user: {
-                    followers: {
-                      some: {
-                        userId,
-                      },
-                    },
-                  },
-                },
-                {
-                  rePostedByUser: {
-                    some: {
-                      user: {
-                        followers: {
-                          some: {
-                            userId,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              ],
-            },
-          }),
-          // ! Cannot get exact rePost user object, only can get the rePostUser array and return the first one
-          this.prisma.post.findMany({
-            where: {
-              OR: [
-                {
-                  user: {
-                    followers: {
-                      some: {
-                        userId,
-                      },
-                    },
-                  },
-                },
-                {
-                  rePostedByUser: {
-                    some: {
-                      user: {
-                        followers: {
-                          some: {
-                            userId,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              ],
-            },
-            include: {
-              tags: true,
-              user: true,
-              rePostedByUser: {
-                select: {
-                  user: true,
-                },
-                take: 1,
-              },
-              _count: {
-                select: {
-                  likedByUser: true,
-                  comments: true,
-                  bookmarkedByUser: true,
-                  rePostedByUser: true,
-                },
-              },
-            },
-            orderBy: {
-              createdAt: 'desc',
-            },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-          }),
-        ],
-      );
+      // const [postCount, followingUserPostList] = await this.prisma.$transaction(
+      //   [
+      //     this.prisma.post.count({
+      //       where: {
+      //         OR: [
+      //           {
+      //             user: {
+      //               followers: {
+      //                 some: {
+      //                   userId,
+      //                 },
+      //               },
+      //             },
+      //           },
+      //           {
+      //             rePostedByUser: {
+      //               some: {
+      //                 user: {
+      //                   followers: {
+      //                     some: {
+      //                       userId,
+      //                     },
+      //                   },
+      //                 },
+      //               },
+      //             },
+      //           },
+      //         ],
+      //       },
+      //     }),
+      //     // ! Cannot get exact rePost user object, only can get the rePostUser array and return the first one
+      //     this.prisma.post.findMany({
+      //       where: {
+      //         OR: [
+      //           {
+      //             user: {
+      //               followers: {
+      //                 some: {
+      //                   userId,
+      //                 },
+      //               },
+      //             },
+      //           },
+      //           {
+      //             rePostedByUser: {
+      //               some: {
+      //                 user: {
+      //                   followers: {
+      //                     some: {
+      //                       userId,
+      //                     },
+      //                   },
+      //                 },
+      //               },
+      //             },
+      //           },
+      //         ],
+      //       },
+      //       include: {
+      //         tags: true,
+      //         user: true,
+      //         rePostedByUser: {
+      //           select: {
+      //             user: true,
+      //           },
+      //           take: 1,
+      //         },
+      //         _count: {
+      //           select: {
+      //             likedByUser: true,
+      //             comments: true,
+      //             bookmarkedByUser: true,
+      //             rePostedByUser: true,
+      //           },
+      //         },
+      //       },
+      //       orderBy: {
+      //         createdAt: 'desc',
+      //       },
+      //       skip: offset ?? 0,
+      //       take: limit ?? 20,
+      //     }),
+      //   ],
+      // );
 
-      const transformedPosts = followingUserPostList.map(
-        ({ _count, tags, rePostedByUser, ...post }) => ({
-          ...post,
-          tags: tags.map((t) => t.tagName),
-          likedCount: _count.likedByUser,
-          commentCount: _count.comments,
-          bookmarkedCount: _count.bookmarkedByUser,
-          rePostedCount: _count.rePostedByUser,
-          rePostedByUser: rePostedByUser.map((u) => u.user),
-        }),
-      );
+      // const transformedPosts = followingUserPostList.map(
+      //   ({ _count, tags, rePostedByUser, ...post }) => ({
+      //     ...post,
+      //     tags: tags.map((t) => t.tagName),
+      //     likedCount: _count.likedByUser,
+      //     commentCount: _count.comments,
+      //     bookmarkedCount: _count.bookmarkedByUser,
+      //     rePostedCount: _count.rePostedByUser,
+      //     rePostedByUser: rePostedByUser.map((u) => u.user),
+      //   }),
+      // );
 
-      const returnObject = {
-        count: postCount,
-        rows: transformedPosts,
-        limit: limit ?? 20,
-        offset: offset ?? 0,
-      };
-      return returnObject;
+      // const returnObject = {
+      //   count: postCount,
+      //   rows: transformedPosts,
+      //   limit: limit ?? 20,
+      //   offset: offset ?? 0,
+      // };
+      // return returnObject;
+
+      // const testGetFollowingPost = await this.prisma.userPostOrder.findMany({
+      //   where: {
+      //     user: {
+      //       followers: {
+      //         some: {
+      //           userId,
+      //         },
+      //       },
+      //     },
+      //   },
+      //   include: {
+      //     post: true,
+      //     rePost: true,
+      //     user: true,
+      //   },
+      // });
+
+      const groupedPosts = await this.prisma.userPostOrder.groupBy({
+        by: ['postId', 'rePostId'],
+        where: {
+          user: {
+            followers: {
+              some: {
+                userId,
+              },
+            },
+          },
+        },
+      });
+
+      return groupedPosts
+
+      // const testGetFollowingPost = await this.prisma.$queryRaw`
+      // --  SELECT *
+      // --   FROM "UserPostOrder" AS upo
+      // --   LEFT JOIN (
+      // --     SELECT * FROM "User"
+      // --   ) AS u ON u."userId" = upo."userId"
+      // SELECT * 
+      //   FROM "User" AS u
+      //   LEFT JOIN (
+      //     SELECT *
+      //     FROM "_Followers"
+      //     WHERE "A" = ${userId}
+      //   ) AS uf ON u."userId" = uf."B"
+      //   WHERE ${userId} = u."userId"
+      // `;
+      // return testGetFollowingPost;
     } catch (err) {
       console.log(err);
     }

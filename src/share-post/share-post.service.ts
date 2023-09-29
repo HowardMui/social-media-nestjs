@@ -13,23 +13,31 @@ export class SharePostService {
 
   async rePostAPostToCurrentUserBlog(postId: number, userId: number) {
     try {
-      await this.prisma.$transaction([
-        this.prisma.userRePost.create({
+      await this.prisma.$transaction(async (tx) => {
+        // const createRePost = await tx.userRePost.create({
+        //   data: {
+        //     postId,
+        //     userId,
+        //   },
+        //   include: {
+        //     post: {
+        //       include: {
+        //         postOrderByUser: true,
+        //       },
+        //     },
+        //   },
+        // });
+
+        // * Create the post order in userPostOrder table
+        // if (createRePost) {
+        await tx.userPostOrder.create({
           data: {
-            postId,
+            rePostId: postId,
             userId,
           },
-        }),
-        // * Update the updatedAt field in the Post model
-        this.prisma.post.update({
-          where: {
-            postId,
-          },
-          data: {
-            updatedAt: new Date(),
-          },
-        }),
-      ]);
+        });
+        // }
+      });
       return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
@@ -41,27 +49,43 @@ export class SharePostService {
     }
   }
 
-  async cancelRePostAPost(postId: number, userId: number) {
+  async cancelRePostAPost(rePostId: number, userId: number) {
     try {
-      await this.prisma.$transaction([
-        this.prisma.userRePost.delete({
-          where: {
-            postId_userId: {
-              postId,
-              userId,
-            },
-          },
-        }),
-        // * Update the updatedAt field in the Post model
-        this.prisma.post.update({
-          where: {
-            postId,
-          },
-          data: {
-            updatedAt: new Date(),
-          },
-        }),
-      ]);
+      // await this.prisma.$transaction(async (tx) => {
+      // const deletedRePost = await this.prisma.userRePost.delete({
+      //   where: {
+      //     postId_userId: {
+      //       postId: rePostId,
+      //       userId,
+      //     },
+      //   },
+      //   include: {
+      //     post: {
+      //       include: {
+      //         postOrderByUser: true,
+      //       },
+      //     },
+      //   },
+      // });
+      // console.log('deletedRePost in cancelRePostAPost',deletedRePost)
+      // * Delete the post order in userPostOrder table
+      // if (deletedRePost) {
+      await this.prisma.userPostOrder.deleteMany({
+        where: {
+          rePostId,
+          userId,
+          // postId_repostId_userId_id:{
+          //   postId,
+          //   userId,
+          // }
+          // postId_userId: {
+          //   postId: deletedRePost.postId,
+          //   userId: deletedRePost.userId,
+          // },
+        },
+      });
+      // }
+      // });
       return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
