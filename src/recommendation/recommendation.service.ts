@@ -16,6 +16,7 @@ import { PostResponse } from 'src/post/dto';
 export class RecommendationService {
   constructor(private prisma: PrismaSrcService, private redis: RedisService) {}
 
+  // ! old version of User repost joining
   // async getRecommendationList(query: GetRecommendationQueryParamsWithFilter) {
   //   const { limit, offset, type } = query;
 
@@ -254,13 +255,13 @@ export class RecommendationService {
       const { limit, offset } = query;
 
       // * grp = get recommend posts
-      const cacheRecommendationPosts = await this.redis.getRedisValue<
-        ListResponseWithoutCount<PostResponse>
-      >(`grp${formatDataToRedis<RecommendationPostFilter>(query)}`);
-      if (cacheRecommendationPosts) {
-        return cacheRecommendationPosts;
-      } else {
-        const findRecommendPosts = await this.prisma.$queryRaw`
+      // const cacheRecommendationPosts = await this.redis.getRedisValue<
+      //   ListResponseWithoutCount<PostResponse>
+      // >(`grp${formatDataToRedis<RecommendationPostFilter>(query)}`);
+      // if (cacheRecommendationPosts) {
+      //   return cacheRecommendationPosts;
+      // } else {
+      const findRecommendPosts = await this.prisma.$queryRaw`
           SELECT
             p.*,
             pt."tags",
@@ -284,10 +285,11 @@ export class RecommendationService {
             GROUP BY "postId"
           ) lc ON lc."postId" = p."postId"
           LEFT JOIN (
-            SELECT "postId", COUNT(*) AS rePostsCount
-            FROM "user_rePost_posts"
-            GROUP BY "postId"
-          ) rc ON rc."postId" = p."postId"
+            SELECT "rePostId", COUNT(*) AS rePostsCount
+            FROM "UserPostOrder"
+            WHERE "rePostId" IS NOT NULL
+            GROUP BY "rePostId"
+          ) rc ON rc."rePostId" = p."postId"
           LEFT JOIN (
           SELECT p."postId", 
             CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
@@ -315,21 +317,21 @@ export class RecommendationService {
             FROM "User" pu
           ) pu ON pu."userId" = p."userId"
           ORDER BY
-          "score" DESC
+          "postScore" DESC
           LIMIT ${limit || 20}
           OFFSET ${offset || 0}
           `;
-        const returnFormattedPosts = {
-          rows: findRecommendPosts,
-          limit: limit ?? 20,
-          offset: offset ?? 0,
-        };
-        await this.redis.setRedisValue(
-          `grp${formatDataToRedis<RecommendationPostFilter>(query)}`,
-          returnFormattedPosts,
-        );
-        return returnFormattedPosts;
-      }
+      const returnFormattedPosts = {
+        rows: findRecommendPosts,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
+      };
+      // await this.redis.setRedisValue(
+      //   `grp${formatDataToRedis<RecommendationPostFilter>(query)}`,
+      //   returnFormattedPosts,
+      // );
+      return returnFormattedPosts;
+      // }
     } catch (err) {
       console.log(err);
     }
@@ -340,14 +342,14 @@ export class RecommendationService {
       const { limit, offset } = query;
 
       // * gru = get recommend users
-      const cacheRecommendationUsers = await this.redis.getRedisValue<
-        ListResponseWithoutCount<UserResponse>
-      >(`gru${formatDataToRedis<RecommendationUserFilter>(query)}`);
-      if (cacheRecommendationUsers) {
-        return cacheRecommendationUsers;
-      } else {
-        // * base on the given weights and sort by the total score
-        const recommendedUsers = await this.prisma.$queryRaw`
+      // const cacheRecommendationUsers = await this.redis.getRedisValue<
+      //   ListResponseWithoutCount<UserResponse>
+      // >(`gru${formatDataToRedis<RecommendationUserFilter>(query)}`);
+      // if (cacheRecommendationUsers) {
+      //   return cacheRecommendationUsers;
+      // } else {
+      // * base on the given weights and sort by the total score
+      const recommendedUsers = await this.prisma.$queryRaw`
           SELECT u.*,
           (COALESCE(UserPost."postCount"::integer, 0) * 8)
           + (COALESCE(UserRePost."rePostCount"::integer, 0) * 6)
@@ -362,7 +364,8 @@ export class RecommendationService {
           ) AS UserPost ON UserPost."userId" = u."userId"
           LEFT JOIN (
             SELECT "userId", COUNT(*)::integer AS "rePostCount"
-              FROM "user_rePost_posts"
+              FROM "UserPostOrder"
+              WHERE "rePostId" IS NOT NULL
               GROUP BY "userId"
           ) AS UserRePost ON UserRePost."userId" = u."userId"
           LEFT JOIN (
@@ -385,17 +388,17 @@ export class RecommendationService {
             LIMIT ${limit ?? 20}
             OFFSET ${offset ?? 0}
           `;
-        const returnFormattedUsers = {
-          rows: recommendedUsers,
-          limit: limit ?? 20,
-          offset: offset ?? 0,
-        };
-        await this.redis.setRedisValue(
-          `gru${formatDataToRedis<RecommendationUserFilter>(query)}`,
-          returnFormattedUsers,
-        );
-        return returnFormattedUsers;
-      }
+      const returnFormattedUsers = {
+        rows: recommendedUsers,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
+      };
+      // await this.redis.setRedisValue(
+      //   `gru${formatDataToRedis<RecommendationUserFilter>(query)}`,
+      //   returnFormattedUsers,
+      // );
+      return returnFormattedUsers;
+      // }
     } catch (err) {
       console.log(err);
     }

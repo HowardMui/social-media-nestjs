@@ -38,7 +38,7 @@ model User {
   description String?
   isVerified Boolean @default(false)
   posts Post[] 
-  rePosts UserRePost[]
+  // rePosts UserRePost[]
   likedPosts   UserLikedPost[]
   bookmarkedPosts UserBookmark[] 
   comments       Comment[]
@@ -100,7 +100,7 @@ model Post{
   content String
   userId Int
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  rePostedByUser UserRePost[]
+  // rePostedByUser UserRePost[]
   likedByUser   UserLikedPost[]
   tags Tag[] @relation(name: "PostTags")
   comments       Comment[]
@@ -163,17 +163,18 @@ model UserBookmark{
   @@map("user_bookmarked_posts")
 }
 
-model UserRePost {
-  // rePostId Int @id @default(autoincrement())
-  postId Int
-  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
-  userId Int
-  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+// ! Drop Old UserRepost
+// model UserRePost {
+//   // rePostId Int @id @default(autoincrement())
+//   postId Int
+//   post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+//   userId Int
+//   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
-  @@id([postId, userId])
-  // @@id([userId])
-  @@map("user_rePost_posts")
-}
+//   @@id([postId, userId])
+//   // @@id([userId])
+//   @@map("user_rePost_posts")
+// }
 
 model UserPostOrder {
   orderListId Int @id @default(autoincrement())
