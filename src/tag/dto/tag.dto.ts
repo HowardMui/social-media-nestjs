@@ -8,6 +8,13 @@ export class GetAllTagQueryParamsWithFilter extends PaginationQueryParams {
   tagName?: string;
 }
 
+export class Tag {
+  tagId: number;
+  tagName: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
 export class GetAllTagResponse implements Omit<TimeStamp, 'deletedAt'> {
   tagId: number;
   tagName: string;

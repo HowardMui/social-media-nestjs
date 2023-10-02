@@ -41,7 +41,7 @@ export class ListResponseWithoutCount<T> {
 }
 
 export class TimeStamp {
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  deletedAt: string | Date;
 }
