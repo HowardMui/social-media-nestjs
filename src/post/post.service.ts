@@ -73,7 +73,7 @@ export class PostService {
                   likedByUser: true,
                   comments: true,
                   bookmarkedByUser: true,
-                  rePostedByUser: true,
+                  rePostOrderByUser: true,
                 },
               },
             },
@@ -86,7 +86,7 @@ export class PostService {
           likedCount: _count.likedByUser,
           commentCount: _count.comments,
           bookmarkedCount: _count.bookmarkedByUser,
-          rePostedCount: _count.rePostedByUser,
+          rePostedCount: _count.rePostOrderByUser,
         }));
 
         const returnObject = {
@@ -140,7 +140,7 @@ export class PostService {
               likedByUser: true,
               comments: true,
               bookmarkedByUser: true,
-              rePostedByUser: true,
+              rePostOrderByUser: true,
             },
           },
         },
@@ -156,7 +156,7 @@ export class PostService {
         likedCount: _count.likedByUser,
         commentCount: _count.comments,
         bookmarkedCount: _count.bookmarkedByUser,
-        rePostedCount: _count.rePostedByUser,
+        rePostedCount: _count.rePostOrderByUser,
       };
       return { ...rest, ...transformedPosts };
     } catch (err) {

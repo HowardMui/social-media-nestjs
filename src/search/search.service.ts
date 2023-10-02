@@ -63,7 +63,7 @@ export class SearchService {
                   likedByUser: true,
                   comments: true,
                   bookmarkedByUser: true,
-                  rePostedByUser: true,
+                  rePostOrderByUser: true,
                 },
               },
             },
@@ -76,7 +76,7 @@ export class SearchService {
               likedCount: _count.likedByUser,
               commentCount: _count.comments,
               bookmarkedCount: _count.bookmarkedByUser,
-              rePostedCount: _count.rePostedByUser,
+              rePostedCount: _count.rePostOrderByUser,
             }),
           );
           return transformedPosts;
@@ -100,7 +100,7 @@ export class SearchService {
                       likedByUser: true,
                       comments: true,
                       bookmarkedByUser: true,
-                      rePostedByUser: true,
+                      rePostOrderByUser: true,
                     },
                   },
                 },
@@ -123,7 +123,7 @@ export class SearchService {
                 likedCount: _count.likedByUser,
                 commentCount: _count.comments,
                 bookmarkedCount: _count.bookmarkedByUser,
-                rePostedCount: _count.rePostedByUser,
+                rePostedCount: _count.rePostOrderByUser,
               };
             });
 

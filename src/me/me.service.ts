@@ -400,7 +400,7 @@ export class MeService {
                         likedByUser: true,
                         comments: true,
                         bookmarkedByUser: true,
-                        rePostedByUser: true,
+                        rePostOrderByUser: true,
                       },
                     },
                   },
@@ -417,7 +417,7 @@ export class MeService {
             likedCount: _count.likedByUser,
             commentCount: _count.comments,
             bookmarkedCount: _count.bookmarkedByUser,
-            rePostedCount: _count.rePostedByUser,
+            rePostedCount: _count.rePostOrderByUser,
           };
         });
         const returnBookmarkedObject = {
@@ -472,7 +472,7 @@ export class MeService {
                       likedByUser: true,
                       comments: true,
                       bookmarkedByUser: true,
-                      rePostedByUser: true,
+                      rePostOrderByUser: true,
                     },
                   },
                 },
@@ -489,7 +489,7 @@ export class MeService {
             likedCount: _count.likedByUser,
             commentCount: _count.comments,
             bookmarkedCount: _count.bookmarkedByUser,
-            rePostedCount: _count.rePostedByUser,
+            rePostedCount: _count.rePostOrderByUser,
           };
         });
 
