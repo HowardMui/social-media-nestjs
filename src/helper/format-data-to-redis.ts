@@ -1,5 +1,5 @@
-export const formatDataToRedis = <T>(filter: T): string => {
-  let queryString = '';
+export const formatDataToRedis = <T>(filter: T, userId?: number): string => {
+  let queryString = `-u:${userId}`;
   if (!filter['limit']) {
     queryString += `-l:20`;
   }
