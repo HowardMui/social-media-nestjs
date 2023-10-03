@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  HttpStatus,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaSrcService } from '../prisma-src/prisma-src.service';
 import { GetOneUserResponse, GetUserListQueryParams } from './dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
@@ -12,7 +7,6 @@ import {
   returnAscOrDescInQueryParamsWithFilter,
 } from 'src/helper';
 import { GetUserPostEnum, GetUserPostQuery } from './dto/user-post.dto';
-import { PostResponse } from 'src/post/dto';
 import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
@@ -304,7 +298,12 @@ export class UserService {
             }),
           ]);
 
-          return formatListResponseObject(postCount, postList, limit, offset);
+          return formatListResponseObject({
+            rows: postList,
+            count: postCount,
+            limit,
+            offset,
+          });
 
         // * Find user liked post
         case GetUserPostEnum.Likes:

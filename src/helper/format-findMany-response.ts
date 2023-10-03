@@ -19,7 +19,6 @@ export const formatResponseListData = <T extends Record<string, any>>(
       formattedObj[formattedKey as keyof T] = counts[key];
     }
   }
-
   delete formattedObj['_count'];
   if (formattedObj['tags']) {
     const newTagMapping = formattedObj['tags'].map((t: Tag) => t.tagName);

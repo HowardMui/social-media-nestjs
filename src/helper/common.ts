@@ -36,16 +36,20 @@ export const returnAscOrDescInQueryParamsWithFilter = (
   return tempObject;
 };
 
+interface FormatListResponseType<T> {
+  rows: T;
+  count?: number;
+  limit?: number;
+  offset?: number;
+}
+
 export const formatListResponseObject = <T>(
-  count: number,
-  rows: T,
-  limit?: number,
-  offset?: number,
+  params: FormatListResponseType<T>,
 ) => {
   return {
-    count,
-    rows,
-    limit: limit ?? 20,
-    offset: offset ?? 0,
+    count: params.count,
+    rows: params.rows,
+    limit: params.limit ?? 20,
+    offset: params.offset ?? 0,
   };
 };

@@ -29,7 +29,6 @@ import {
 import { RedisService } from 'src/redis/redis.service';
 import { ListResponse } from 'src/types';
 
-
 @Injectable()
 export class MeService {
   constructor(
@@ -228,7 +227,7 @@ export class MeService {
       // * gmfe = get my followers
       const cacheFollowersData = await this.redis.getRedisValue<
         ListResponse<GetMeFollowersResponse>
-      >(`gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query)}`);
+      >(`gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query, userId)}`);
       if (cacheFollowersData) {
         return cacheFollowersData;
       } else {
@@ -273,17 +272,17 @@ export class MeService {
           },
         );
 
-        const returnObject = {
+        const response = {
           count: totalFollowers._count.followers,
           rows: formatFollowersList,
           limit: limit ?? 0,
           offset: offset ?? 20,
         };
         await this.redis.setRedisValue(
-          `gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query)}`,
-          returnObject,
+          `gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query, userId)}`,
+          response,
         );
-        return returnObject;
+        return response;
       }
     } catch (err) {
       console.log(err);
@@ -297,7 +296,7 @@ export class MeService {
       // * gmfi = get my following
       const cacheFollowingData = await this.redis.getRedisValue<
         ListResponse<GetMeFollowingResponse>
-      >(`gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query)}`);
+      >(`gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query, userId)}`);
       if (cacheFollowingData) {
         return cacheFollowingData;
       } else {
@@ -344,17 +343,17 @@ export class MeService {
           },
         );
 
-        const returnObject = {
+        const response = {
           count: totalFollowing._count.following,
           rows: transformFollowingList,
           limit: limit ?? 0,
           offset: offset ?? 20,
         };
         await this.redis.setRedisValue(
-          `gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query)}`,
-          returnObject,
+          `gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query, userId)}`,
+          response,
         );
-        return returnObject;
+        return response;
       }
     } catch (err) {
       console.log(err);
@@ -374,7 +373,7 @@ export class MeService {
       // * gmpb = get my post bookmark
       const cachedBookmarkedData = await this.redis.getRedisValue<
         ListResponse<PostResponse>
-      >(`gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query)}`);
+      >(`gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query, userId)}`);
       if (cachedBookmarkedData) {
         return cachedBookmarkedData;
       } else {
@@ -385,53 +384,42 @@ export class MeService {
                 userId,
               },
             }),
-            this.prisma.userBookmark.findMany({
+            this.prisma.post.findMany({
               where: {
-                userId,
+                bookmarkedByUser: {
+                  some: {
+                    userId,
+                  },
+                },
               },
               skip: offset ?? 0,
               take: limit ?? 20,
-              select: {
-                post: {
-                  include: {
-                    user: true,
-                    tags: true,
-                    _count: {
-                      select: {
-                        likedByUser: true,
-                        comments: true,
-                        bookmarkedByUser: true,
-                        rePostOrderByUser: true,
-                      },
-                    },
+              include: {
+                user: true,
+                tags: true,
+                _count: {
+                  select: {
+                    likedByUser: true,
+                    comments: true,
+                    bookmarkedByUser: true,
+                    rePostOrderByUser: true,
                   },
                 },
               },
             }),
           ]);
 
-        const transformBookmarkPosts = _.map(bookmarkedPostList, ({ post }) => {
-          const { _count, ...rest } = post;
-          return {
-            ...rest,
-            tags: post.tags.map((t) => t.tagName),
-            likedCount: _count.likedByUser,
-            commentCount: _count.comments,
-            bookmarkedCount: _count.bookmarkedByUser,
-            rePostedCount: _count.rePostOrderByUser,
-          };
-        });
-        const returnBookmarkedObject = {
+        const response = formatListResponseObject({
+          rows: bookmarkedPostList.map((post) => formatResponseListData(post)),
           count: totalBookmarkedPost,
-          rows: transformBookmarkPosts,
-          limit: limit ?? 0,
-          offset: offset ?? 20,
-        };
+          limit,
+          offset,
+        });
         await this.redis.setRedisValue(
-          `gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query)}`,
-          returnBookmarkedObject,
+          `gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query, userId)}`,
+          response,
         );
-        return returnBookmarkedObject;
+        return response;
       }
     } catch (err) {
       console.log(err);
@@ -447,7 +435,7 @@ export class MeService {
       // * gmpl = get my post like
       const cachedLikedPostData = await this.redis.getRedisValue<
         ListResponse<PostResponse>
-      >(`gmpl${formatDataToRedis<GetMeLikedQueryParams>(query)}`);
+      >(`gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`);
       if (cachedLikedPostData) {
         return cachedLikedPostData;
       } else {
@@ -482,29 +470,17 @@ export class MeService {
           }),
         ]);
 
-        const transformLikedPosts = _.map(likedPostList, ({ post }) => {
-          const { _count, ...rest } = post;
-          return {
-            ...rest,
-            tags: post.tags.map((t) => t.tagName),
-            likedCount: _count.likedByUser,
-            commentCount: _count.comments,
-            bookmarkedCount: _count.bookmarkedByUser,
-            rePostedCount: _count.rePostOrderByUser,
-          };
-        });
-
-        const returnLikedPostObject = {
+        const response = formatListResponseObject({
+          rows: likedPostList.map((post) => formatResponseListData(post)),
           count: totalLikedPost,
-          rows: transformLikedPosts,
-          limit: limit ?? 0,
-          offset: offset ?? 20,
-        };
+          limit,
+          offset,
+        });
         await this.redis.setRedisValue(
-          `gmpl${formatDataToRedis<GetMeLikedQueryParams>(query)}`,
-          returnLikedPostObject,
+          `gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`,
+          response,
         );
-        return returnLikedPostObject;
+        return response;
       }
     } catch (err) {
       console.log(err);
@@ -517,7 +493,6 @@ export class MeService {
     const { limit, offset } = query;
 
     try {
-      // // * gamp = get all my posts
       // ! Raw prisma sql query, old version of User repost joining
       // const cachedAllMePostData = await this.redis.getRedisValue<
       //   ListResponse<PostResponse>
@@ -651,9 +626,10 @@ export class MeService {
       //   return returnAllPostObject;
       // }
 
+      // * gamp = get all my posts
       const cachedAllMePostData = await this.redis.getRedisValue<
         ListResponse<PostResponse>
-      >(`gamp${formatDataToRedis<GetMePostQueryParams>(query)}`);
+      >(`gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`);
       if (cachedAllMePostData) {
         return cachedAllMePostData;
       } else {
@@ -713,94 +689,24 @@ export class MeService {
             take: limit ?? 20,
           }),
         ]);
+
+        const response = formatListResponseObject({
+          rows: postList.map((post) =>
+            post.rePostId
+              ? formatResponseListData(post.rePost)
+              : formatResponseListData(post.post),
+          ),
+          count: postCount,
+          limit,
+          offset,
+        });
+
         await this.redis.setRedisValue(
-          `gamp${formatDataToRedis<GetMePostQueryParams>(query)}`,
-          formatListResponseObject(postCount, postList, limit, offset),
+          `gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`,
+          response,
         );
-        return formatListResponseObject(postCount, postList, limit, offset);
+        return response;
       }
-
-      // ! Wrong prisma query with no ordering
-      // const [postCount, followingUserPostList] = await this.prisma.$transaction(
-      //   [
-      //     this.prisma.post.count({
-      //       where: {
-      //         OR: [
-      //           {
-      //             userId,
-      //           },
-      //           {
-      //             rePostedByUser: {
-      //               some: {
-      //                 userId,
-      //               },
-      //             },
-      //           },
-      //         ],
-      //       },
-      //     }),
-      //     // ! Cannot get exact rePost user object, only can get the rePostUser array and return the first one
-      //     this.prisma.post.findMany({
-      //       where: {
-      //         OR: [
-      //           {
-      //             userId,
-      //           },
-      //           {
-      //             rePostedByUser: {
-      //               some: {
-      //                 userId,
-      //               },
-      //             },
-      //           },
-      //         ],
-      //       },
-      //       include: {
-      //         tags: true,
-      //         user: true,
-      //         rePostedByUser: {
-      //           select: {
-      //             user: true,
-      //           },
-      //           take: 1,
-      //         },
-      //         _count: {
-      //           select: {
-      //             likedByUser: true,
-      //             comments: true,
-      //             bookmarkedByUser: true,
-      //             rePostedByUser: true,
-      //           },
-      //         },
-      //       },
-      //       orderBy: {
-      //         updatedAt: 'desc',
-      //       },
-      //       skip: offset ?? 0,
-      //       take: limit ?? 20,
-      //     }),
-      //   ],
-      // );
-
-      // const transformedPosts = followingUserPostList.map(
-      //   ({ _count, tags, rePostedByUser, ...post }) => ({
-      //     ...post,
-      //     tags: tags.map((t) => t.tagName),
-      //     likedCount: _count.likedByUser,
-      //     commentCount: _count.comments,
-      //     bookmarkedCount: _count.bookmarkedByUser,
-      //     rePostedCount: _count.rePostedByUser,
-      //     rePostedByUser: rePostedByUser.map((u) => u.user),
-      //   }),
-      // );
-
-      // const returnObject = {
-      //   count: postCount,
-      //   rows: transformedPosts,
-      //   limit: limit ?? 20,
-      //   offset: offset ?? 0,
-      // };
-      // return returnObject;
     } catch (err) {
       console.log(err);
     }
@@ -864,12 +770,12 @@ export class MeService {
           ],
         );
 
-        const response = formatListResponseObject(
-          postCount,
-          postListWithComment.map((n) => formatResponseListData(n)),
+        const response = formatListResponseObject({
+          count: postCount,
+          rows: postListWithComment.map((post) => formatResponseListData(post)),
           limit,
           offset,
-        );
+        });
 
         await this.redis.setRedisValue(
           `gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`,
@@ -980,12 +886,12 @@ export class MeService {
         }),
       ]);
 
-      return formatListResponseObject(
-        postCount,
-        postList.map((n) => formatResponseListData(n)),
+      return formatListResponseObject({
+        rows: postList.map((post) => formatResponseListData(post)),
+        count: postCount,
         limit,
         offset,
-      );
+      });
     } catch (err) {
       console.log(err);
     }

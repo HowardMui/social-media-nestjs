@@ -7,10 +7,10 @@ import {
 } from './dto';
 import { RedisService } from 'src/redis/redis.service';
 import { GetAllTagResponse } from 'src/tag/dto';
-import { formatDataToRedis } from 'src/helper/format-data-to-redis';
 import { UserResponse } from 'src/user/dto';
 import { ListResponseWithoutCount } from 'src/types';
 import { PostResponse } from 'src/post/dto';
+import { formatDataToRedis, formatListResponseObject } from 'src/helper';
 
 @Injectable()
 export class RecommendationService {
@@ -255,13 +255,13 @@ export class RecommendationService {
       const { limit, offset } = query;
 
       // * grp = get recommend posts
-      // const cacheRecommendationPosts = await this.redis.getRedisValue<
-      //   ListResponseWithoutCount<PostResponse>
-      // >(`grp${formatDataToRedis<RecommendationPostFilter>(query)}`);
-      // if (cacheRecommendationPosts) {
-      //   return cacheRecommendationPosts;
-      // } else {
-      const findRecommendPosts = await this.prisma.$queryRaw`
+      const cacheRecommendationPosts = await this.redis.getRedisValue<
+        ListResponseWithoutCount<PostResponse>
+      >(`grp${formatDataToRedis<RecommendationPostFilter>(query)}`);
+      if (cacheRecommendationPosts) {
+        return cacheRecommendationPosts;
+      } else {
+        const findRecommendPosts = await this.prisma.$queryRaw`
           SELECT
             p.*,
             pt."tags",
@@ -321,17 +321,17 @@ export class RecommendationService {
           LIMIT ${limit || 20}
           OFFSET ${offset || 0}
           `;
-      const returnFormattedPosts = {
-        rows: findRecommendPosts,
-        limit: limit ?? 20,
-        offset: offset ?? 0,
-      };
-      // await this.redis.setRedisValue(
-      //   `grp${formatDataToRedis<RecommendationPostFilter>(query)}`,
-      //   returnFormattedPosts,
-      // );
-      return returnFormattedPosts;
-      // }
+        const response = formatListResponseObject({
+          rows: findRecommendPosts,
+          limit: limit ?? 20,
+          offset: offset ?? 0,
+        });
+        await this.redis.setRedisValue(
+          `grp${formatDataToRedis<RecommendationPostFilter>(query)}`,
+          response,
+        );
+        return response;
+      }
     } catch (err) {
       console.log(err);
     }
@@ -342,14 +342,14 @@ export class RecommendationService {
       const { limit, offset } = query;
 
       // * gru = get recommend users
-      // const cacheRecommendationUsers = await this.redis.getRedisValue<
-      //   ListResponseWithoutCount<UserResponse>
-      // >(`gru${formatDataToRedis<RecommendationUserFilter>(query)}`);
-      // if (cacheRecommendationUsers) {
-      //   return cacheRecommendationUsers;
-      // } else {
-      // * base on the given weights and sort by the total score
-      const recommendedUsers = await this.prisma.$queryRaw`
+      const cacheRecommendationUsers = await this.redis.getRedisValue<
+        ListResponseWithoutCount<UserResponse>
+      >(`gru${formatDataToRedis<RecommendationUserFilter>(query)}`);
+      if (cacheRecommendationUsers) {
+        return cacheRecommendationUsers;
+      } else {
+        // * base on the given weights and sort by the total score
+        const recommendedUsers = await this.prisma.$queryRaw`
           SELECT u.*,
           (COALESCE(UserPost."postCount"::integer, 0) * 8)
           + (COALESCE(UserRePost."rePostCount"::integer, 0) * 6)
@@ -388,17 +388,17 @@ export class RecommendationService {
             LIMIT ${limit ?? 20}
             OFFSET ${offset ?? 0}
           `;
-      const returnFormattedUsers = {
-        rows: recommendedUsers,
-        limit: limit ?? 20,
-        offset: offset ?? 0,
-      };
-      // await this.redis.setRedisValue(
-      //   `gru${formatDataToRedis<RecommendationUserFilter>(query)}`,
-      //   returnFormattedUsers,
-      // );
-      return returnFormattedUsers;
-      // }
+        const response = formatListResponseObject({
+          rows: recommendedUsers,
+          limit: limit ?? 20,
+          offset: offset ?? 0,
+        });
+        await this.redis.setRedisValue(
+          `gru${formatDataToRedis<RecommendationUserFilter>(query)}`,
+          response,
+        );
+        return response;
+      }
     } catch (err) {
       console.log(err);
     }
@@ -440,16 +440,16 @@ export class RecommendationService {
             postCount: _count.posts,
           };
         });
-        const returnFormattedTags = {
+        const response = formatListResponseObject({
           rows: formatTag,
           limit: limit ?? 20,
           offset: offset ?? 0,
-        };
+        });
         await this.redis.setRedisValue(
           `grt${formatDataToRedis<RecommendationTagFilter>(query)}`,
-          returnFormattedTags,
+          response,
         );
-        return returnFormattedTags;
+        return response;
       }
     } catch (err) {
       console.log(err);
