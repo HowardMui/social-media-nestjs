@@ -21,13 +21,14 @@ import * as _ from 'lodash';
 import { PostResponse } from 'src/post/dto';
 import { UpdateMeProfileDTO } from './dto/me-update-profile.dto';
 import {
-  formatCount,
+  formatResponseListData,
+  formatDataToRedis,
   formatDevice,
   formatListResponseObject,
 } from 'src/helper';
 import { RedisService } from 'src/redis/redis.service';
 import { ListResponse } from 'src/types';
-import { formatDataToRedis } from 'src/helper/format-data-to-redis';
+
 
 @Injectable()
 export class MeService {
@@ -816,14 +817,7 @@ export class MeService {
       if (cachedMeCommentList) {
         return cachedMeCommentList;
       } else {
-        // const countTheCommentWithGroupBy = this.prisma.comment.groupBy({
-        //   by: ['postId'],
-        //   where: {
-        //     userId,
-        //   },
-        // });
-
-        const [postcount, postListWithComment] = await this.prisma.$transaction(
+        const [postCount, postListWithComment] = await this.prisma.$transaction(
           [
             this.prisma.post.count({
               where: {
@@ -870,14 +864,19 @@ export class MeService {
           ],
         );
 
-        // console.log(postListWithComment.map((n) => formatCount(n)));
+        const response = formatListResponseObject(
+          postCount,
+          postListWithComment.map((n) => formatResponseListData(n)),
+          limit,
+          offset,
+        );
 
-        return postListWithComment.map((n) => formatCount(n));
+        await this.redis.setRedisValue(
+          `gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`,
+          response,
+        );
 
-        // await this.redis.setRedisValue(
-        //   `gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`,
-        //   returnCommentWithPostObject,
-        // );
+        return response;
       }
     } catch (err) {
       console.log(err);
@@ -886,6 +885,8 @@ export class MeService {
 
   async getAllMeFollowingPostList(query: GetMePostQueryParams, userId: number) {
     const { limit, offset } = query;
+
+    // ! Prisma currently not support the m-n relationship ordered by, need a fix in future
     try {
       const [postCount, postList] = await this.prisma.$transaction([
         this.prisma.post.count({
@@ -973,10 +974,18 @@ export class MeService {
               },
             },
           },
+          orderBy: {
+            createdAt: 'desc',
+          },
         }),
       ]);
 
-      return formatListResponseObject(postCount, postList, limit, offset);
+      return formatListResponseObject(
+        postCount,
+        postList.map((n) => formatResponseListData(n)),
+        limit,
+        offset,
+      );
     } catch (err) {
       console.log(err);
     }

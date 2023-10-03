@@ -1,34 +1,8 @@
 import { Tag } from 'src/tag/dto';
-import { UserResponse } from 'src/user/dto';
 
-// export class TestPostResponse {
-//   postId: number;
-//   image?: string;
-//   content: string;
-//   userId: number;
-//   user: UserResponse;
-//   tags: Tag[];
-//   _count: {
-//     bookmarkedByUser: number;
-//     comments: number;
-//     likedByUser: number;
-//     rePostOrderByUser: number;
-//   };
-// }
-
-// export const formatCount = (post: TestPostResponse) => {
-//   const { _count, tags, ...rest } = post;
-//   return {
-//     ...rest,
-//     tags: tags.map((t) => t.tagName),
-//     likedCount: _count.likedByUser,
-//     commentCount: _count.comments,
-//     bookmarkedCount: _count.bookmarkedByUser,
-//     rePostedCount: _count.rePostOrderByUser,
-//   };
-// };
-
-export const formatCount = <T extends Record<string, any>>(obj: T) => {
+export const formatResponseListData = <T extends Record<string, any>>(
+  obj: T,
+) => {
   const counts = obj['_count'];
   const formattedObj = { ...obj };
 
@@ -47,6 +21,12 @@ export const formatCount = <T extends Record<string, any>>(obj: T) => {
   }
 
   delete formattedObj['_count'];
+  if (formattedObj['tags']) {
+    const newTagMapping = formattedObj['tags'].map((t: Tag) => t.tagName);
+    return { ...formattedObj, tags: newTagMapping } as Omit<T, '_count'> & {
+      [P in keyof typeof countMappings]: number;
+    };
+  }
   return formattedObj as Omit<T, '_count'> & {
     [P in keyof typeof countMappings]: number;
   };
