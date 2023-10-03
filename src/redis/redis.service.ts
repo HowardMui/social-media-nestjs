@@ -31,6 +31,16 @@ export class RedisService {
     }
   }
 
+  async getMultipleKeyPattern(key: string): Promise<any> {
+    const redisKeys: string[] = await this.getRedisKeysPattern(key);
+    // console.log('redisKeys in service',redisKeys)
+    const data: { [key: string]: any } = {};
+    for (const key of redisKeys) {
+      data[key] = await this.cache.get(key);
+    }
+    return data;
+  }
+
   async setRedisValue(key: string, value: any, ttl?: number): Promise<void> {
     try {
       await this.cache.set(
