@@ -42,6 +42,7 @@
     "@nestjs/passport": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^3.0.3",
+    "@nestjs/sequelize": "^10.0.0",
     "@nestjs/swagger": "^7.1.1",
     "@nestjs/throttler": "^5.0.0",
     "@prisma/client": "^4.16.2",
@@ -54,10 +55,13 @@
     "device-detector-js": "^3.0.3",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
+    "mysql2": "^3.6.1",
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sequelize": "^6.33.0",
+    "sequelize-typescript": "^2.1.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
@@ -69,6 +73,7 @@
     "@types/lodash": "^4.14.196",
     "@types/node": "^20.3.1",
     "@types/passport-jwt": "^3.0.8",
+    "@types/sequelize": "^4.28.16",
     "@types/supertest": "^2.0.12",
     "@typescript-eslint/eslint-plugin": "^5.59.11",
     "@typescript-eslint/parser": "^5.59.11",
