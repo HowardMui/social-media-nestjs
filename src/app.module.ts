@@ -18,6 +18,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { LikePostModule } from './like-post/like-post.module';
 import { SharePostModule } from './share-post/share-post.module';
 import { FollowUserActionModule } from './follow-user-action/follow-user-action.module';
+import { SequelizeSrcModule } from './sequelize-src/sequelize-src.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { FollowUserActionModule } from './follow-user-action/follow-user-action.
     LikePostModule,
     SharePostModule,
     FollowUserActionModule,
+    SequelizeSrcModule,
   ],
   controllers: [AppController],
   providers: [AppService],

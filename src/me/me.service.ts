@@ -17,7 +17,6 @@ import { Request, Response } from 'express';
 import * as argon from 'argon2';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as _ from 'lodash';
 import { PostResponse } from 'src/post/dto';
 import { UpdateMeProfileDTO } from './dto/me-update-profile.dto';
 import {
@@ -28,6 +27,12 @@ import {
 } from 'src/helper';
 import { RedisService } from 'src/redis/redis.service';
 import { ListResponse } from 'src/types';
+import { InjectModel } from '@nestjs/sequelize';
+import { UserModel } from 'src/models';
+import { UserAuthModel } from 'src/models/userAuth.model';
+import { Sequelize } from 'sequelize-typescript';
+import { Error } from 'sequelize';
+import { errorHandler } from 'src/error-handler';
 
 @Injectable()
 export class MeService {
@@ -36,6 +41,11 @@ export class MeService {
     private jwt: JwtService,
     private config: ConfigService,
     private redis: RedisService,
+    @InjectModel(UserModel)
+    private userModel: typeof UserModel,
+    @InjectModel(UserAuthModel)
+    private userAuthModel: typeof UserAuthModel,
+    private sequelize: Sequelize,
   ) {}
 
   // * Auth ------------------------------------------------------------------------------------
@@ -105,35 +115,28 @@ export class MeService {
     const { email, password, userName } = dto;
 
     try {
-      // Generate hash password
+      // * Generate hash password
       const hash = await argon.hash(password);
 
-      // Create new User
-      const newUser = await this.prisma.user.create({
-        data: {
-          userName,
+      // * Create new User with sequelize
+      const newUser = await this.userModel.create(
+        {
           email,
-          UserAuths: {
-            create: {
+          userName,
+          UserAuths: [
+            {
               hash,
               email,
             },
-          },
+          ],
         },
-        include: {
-          UserAuths: true,
-        },
-      });
+        { include: [UserAuthModel] },
+      );
 
       return newUser;
-    } catch (err) {
+    } catch (err: Error | any) {
       console.log(err);
-
-      if (err.code === 'P2002') {
-        throw new ForbiddenException('Email already exist');
-      }
-
-      throw err;
+      return errorHandler(err);
     }
   }
 
