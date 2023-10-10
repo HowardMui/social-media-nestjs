@@ -4,6 +4,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaSrcService } from '../../prisma-src/prisma-src.service';
+import { InjectModel } from '@nestjs/sequelize';
+import { UserModel } from 'src/models';
 
 interface JwtPayload {
   userId?: number;
@@ -15,7 +17,12 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(config: ConfigService, private prisma: PrismaSrcService) {
+  constructor(
+    config: ConfigService,
+    private prisma: PrismaSrcService,
+    @InjectModel(UserModel)
+    private userModel: typeof UserModel,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (req: Request) => {
@@ -33,11 +40,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: JwtPayload) {
     const { userId, adminId } = payload;
     if (userId) {
-      const user = await this.prisma.user.findUnique({
-        where: {
-          userId,
-        },
-      });
+      const user = await this.userModel.findByPk(userId);
       return user;
     } else if (adminId) {
       const admin = await this.prisma.admin.findUnique({
