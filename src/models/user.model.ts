@@ -15,6 +15,7 @@ import {
 } from 'sequelize-typescript';
 import { UserAuthModel, UserAuthModelType } from './userAuth.model';
 import { TimeStamp } from 'src/types';
+import { UserFollowModel } from './userFollow.model';
 
 export interface UserModelType extends TimeStamp {
   userId?: number;
@@ -56,7 +57,11 @@ export class UserModel extends Model<UserModelType> {
 
   @Index({ unique: true, name: 'userName_Unique' })
   @Unique({ name: 'email', msg: 'UserName already exist' })
-  @Length({ max: 20, min: 4 })
+  @Length({
+    max: 20,
+    min: 4,
+    msg: 'Minimum 4 chars and maximum 20 chars in userName',
+  })
   @Column
   userName: string;
 
@@ -71,6 +76,20 @@ export class UserModel extends Model<UserModelType> {
 
   @HasMany(() => UserAuthModel)
   UserAuths: UserAuthModel[];
+
+  // * JOIN condition : userId = followerId
+
+  @HasMany(() => UserFollowModel, {
+    foreignKey: 'followingId',
+    as: 'followers',
+  })
+  followers: UserFollowModel[];
+
+  @HasMany(() => UserFollowModel, {
+    foreignKey: 'followerId',
+    as: 'following',
+  })
+  following: UserFollowModel[];
 
   @CreatedAt
   createdAt: Date;

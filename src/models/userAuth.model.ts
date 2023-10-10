@@ -14,7 +14,7 @@ import {
 } from 'sequelize-typescript';
 import { UserModule } from 'src/user/user.module';
 import { UserModel } from './user.model';
-import { Optional } from 'sequelize';
+import { CreationOptional, Optional } from 'sequelize';
 
 export interface UserAuthModelType {
   userAuthId?: number;
@@ -22,9 +22,6 @@ export interface UserAuthModelType {
   hash: string;
   provider?: string;
   userId?: string;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
-  deletedAt?: Date | string;
 }
 
 type UserAuthModelOptionalType = Optional<UserAuthModelType, 'userAuthId'>;
@@ -64,5 +61,5 @@ export class UserAuthModel extends Model<
   updatedAt: Date;
 
   @DeletedAt
-  deletedAt: Date;
+  declare deletedAt: CreationOptional<Date>;
 }
