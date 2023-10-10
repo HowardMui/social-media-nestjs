@@ -2,15 +2,12 @@ import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   GetMeLikedQueryParams,
-  GetMeFollowingQueryParams,
-  GetMeFollowersQueryParams,
   GetMePostQueryParams,
   GetMeBookmarkedQueryParams,
   UserSignInDTO,
   UserSignUpDTO,
   GetMeCommentQueryParams,
   GetMeCommentResponse,
-  GetMeFollowingResponse,
   GetMeFollowersResponse,
 } from './dto';
 import { Request, Response } from 'express';
@@ -28,11 +25,11 @@ import {
 import { RedisService } from 'src/redis/redis.service';
 import { ListResponse } from 'src/types';
 import { InjectModel } from '@nestjs/sequelize';
-import { UserModel } from 'src/models';
+import { UserFollowModel, UserModel } from 'src/models';
 import { UserAuthModel } from 'src/models/userAuth.model';
 import { Sequelize } from 'sequelize-typescript';
-import { Error } from 'sequelize';
 import { errorHandler } from 'src/error-handler';
+import { UserLogModel } from 'src/models/userLog.model';
 
 @Injectable()
 export class MeService {
@@ -45,6 +42,8 @@ export class MeService {
     private userModel: typeof UserModel,
     @InjectModel(UserAuthModel)
     private userAuthModel: typeof UserAuthModel,
+    @InjectModel(UserLogModel)
+    private userLogModel: typeof UserLogModel,
     private sequelize: Sequelize,
   ) {}
 
@@ -59,22 +58,26 @@ export class MeService {
     const { email, password } = dto;
     const { client, device, os } = formatDevice(req);
     try {
-      await this.prisma.$transaction(async (tx) => {
+      await this.sequelize.transaction(async (t) => {
+        const transactionHost = { transaction: t };
+
         // * 1. Find user
-        const findUser = await tx.user.findUnique({
-          where: { email },
-          include: { UserAuths: true },
+        const user = await this.userModel.findOne({
+          where: {
+            email,
+          },
+          include: [UserAuthModel],
         });
 
-        if (!findUser) {
+        if (!user) {
           throw new ForbiddenException('Cannot find user');
-        } else if (!findUser.UserAuths.length) {
+        } else if (!user.UserAuths.length) {
           throw new ForbiddenException('Invalid user.  Please find Admin');
         }
 
         // * 2. Compare hash password
         const passwordMatch = await argon.verify(
-          findUser.UserAuths[0].hash,
+          user.UserAuths[0].hash,
           password,
         );
         if (!passwordMatch) {
@@ -82,21 +85,21 @@ export class MeService {
         }
 
         // * 3. Add record to log table
-        await tx.logTable.create({
-          data: {
-            userId: findUser.userId,
+        await this.userLogModel.create(
+          {
+            userId: user.userId,
             userType: 'user',
             ipAddress: signInIpAddress,
             device: `${device.type}-${device.brand}-${os.name}-${os.version}-${client.type}-${client.name}-${client.version}`,
           },
-        });
+          transactionHost,
+        );
 
         res
           .status(200)
           .cookie(
             'token',
-            (await this.userSignToken(findUser.userId, findUser.email))
-              .access_token,
+            (await this.userSignToken(user.userId, user.email)).access_token,
             {
               httpOnly: true,
               sameSite: 'none',
@@ -104,7 +107,7 @@ export class MeService {
             },
           );
       });
-      return { status: HttpStatus.CREATED };
+      return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
       return err;
@@ -175,192 +178,62 @@ export class MeService {
   async getCurrentUserProfile(currentUserId: number) {
     try {
       // * gmpf = get me profile
-      const cacheMeProfile =
-        await this.redis.getRedisValue<GetMeFollowersResponse>(`gmpf`);
-      if (cacheMeProfile) {
-        return cacheMeProfile;
-      } else {
-        const findMe = await this.prisma.user.findUnique({
-          where: {
-            userId: currentUserId,
-          },
-          include: {
-            _count: {
-              select: {
-                followers: true,
-                following: true,
-              },
-            },
-          },
-        });
-        const { _count, ...rest } = findMe;
-        const formattedProfile = {
-          ...rest,
-          followersCount: _count.followers,
-          followingCount: _count.following,
-        };
-        await this.redis.setRedisValue(`gmpf`, formattedProfile);
-        return formattedProfile;
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  async updateMe(req: Request, dto: UpdateMeProfileDTO) {
-    try {
-      const testUpdate = await this.prisma.user.update({
-        where: {
-          userId: req.user['userId'],
+      // const cacheMeProfile =
+      //   await this.redis.getRedisValue<GetMeFollowersResponse>(`gmpf`);
+      // if (cacheMeProfile) {
+      //   return cacheMeProfile;
+      // } else {
+      const currentUser = await this.userModel.findByPk(currentUserId, {
+        attributes: {
+          include: [
+            [
+              Sequelize.fn('COUNT', Sequelize.col('followers.followingId')),
+              'followersCount',
+            ],
+            [
+              Sequelize.fn('COUNT', Sequelize.col('following.followerId')),
+              'followingCount',
+            ],
+          ],
         },
-        data: dto,
+        include: [
+          {
+            model: UserFollowModel,
+            as: 'following',
+            attributes: [],
+          },
+          {
+            model: UserFollowModel,
+            as: 'followers',
+            attributes: [],
+          },
+        ],
+        group: ['followers.followingId', 'following.followerId'],
       });
-      return testUpdate;
+      // await this.redis.setRedisValue(`gmpf`, currentUser);
+      return currentUser;
+      // }
     } catch (err) {
       console.log(err);
     }
   }
 
-  // * Follower or Following Action ---------------------------------------------------------------------
-
-  async getUserFollowers(userId: number, query: GetMeFollowersQueryParams) {
-    const { limit, offset } = query;
-
+  async updateMe(userId: number, dto: UpdateMeProfileDTO) {
     try {
-      // * gmfe = get my followers
-      const cacheFollowersData = await this.redis.getRedisValue<
-        ListResponse<GetMeFollowersResponse>
-      >(`gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query, userId)}`);
-      if (cacheFollowersData) {
-        return cacheFollowersData;
-      } else {
-        const [totalFollowers, followersList] = await this.prisma.$transaction([
-          this.prisma.user.findUnique({
-            where: {
-              userId,
-            },
-            select: {
-              _count: {
-                select: {
-                  followers: true,
-                },
-              },
-            },
-          }),
-          this.prisma.user.findUnique({
-            where: {
-              userId,
-            },
-            select: {
-              followers: {
-                skip: offset || 0,
-                take: limit || 20,
-                include: {
-                  followers: true,
-                },
-              },
-            },
-          }),
-        ]);
-        // * Add isFollowing boolean into return list
-        const formatFollowersList = followersList.followers.map(
-          ({ followers, ...restFollower }) => {
-            const isFollowing = followers.some(
-              (eachUserInFollowers) => eachUserInFollowers.userId === userId,
-            );
-            return {
-              ...restFollower,
-              isFollowing,
-            };
+      await this.userModel.update(
+        {
+          ...dto,
+        },
+        {
+          where: {
+            userId,
           },
-        );
+        },
+      );
 
-        const response = {
-          count: totalFollowers._count.followers,
-          rows: formatFollowersList,
-          limit: limit ?? 0,
-          offset: offset ?? 20,
-        };
-        await this.redis.setRedisValue(
-          `gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
+      return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
-      throw err;
-    }
-  }
-
-  async getUserFollowing(userId: number, query: GetMeFollowingQueryParams) {
-    const { limit, offset } = query;
-    try {
-      // * gmfi = get my following
-      const cacheFollowingData = await this.redis.getRedisValue<
-        ListResponse<GetMeFollowingResponse>
-      >(`gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query, userId)}`);
-      if (cacheFollowingData) {
-        return cacheFollowingData;
-      } else {
-        const [totalFollowing, followingList] = await this.prisma.$transaction([
-          // * Find one and find total
-          this.prisma.user.findUnique({
-            where: {
-              userId,
-            },
-            select: {
-              _count: {
-                select: {
-                  following: true,
-                },
-              },
-            },
-          }),
-          this.prisma.user.findUnique({
-            where: {
-              userId,
-            },
-            select: {
-              following: {
-                skip: offset || 0,
-                take: limit || 20,
-                include: {
-                  followers: true,
-                },
-              },
-            },
-          }),
-        ]);
-
-        // * Add isFollowing boolean into return list
-        const transformFollowingList = followingList.following.map(
-          ({ followers, ...restFollower }) => {
-            const isFollowing = followers.some(
-              (eachUserInFollowers) => eachUserInFollowers.userId === userId,
-            );
-            return {
-              ...restFollower,
-              isFollowing,
-            };
-          },
-        );
-
-        const response = {
-          count: totalFollowing._count.following,
-          rows: transformFollowingList,
-          limit: limit ?? 0,
-          offset: offset ?? 20,
-        };
-        await this.redis.setRedisValue(
-          `gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
-    } catch (err) {
-      console.log(err);
-      throw err;
     }
   }
 

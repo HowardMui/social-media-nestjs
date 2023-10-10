@@ -6,14 +6,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from 'src/auth/strategy';
 import { RedisModule } from 'src/redis/redis.module';
 import { SequelizeModule } from '@nestjs/sequelize';
-import { UserModel } from 'src/models';
-import { UserAuthModel } from 'src/models/userAuth.model';
+import { UserModel, UserAuthModel, UserLogModel } from 'src/models';
 
 @Module({
   imports: [
     JwtModule.register({}),
     RedisModule,
-    SequelizeModule.forFeature([UserModel, UserAuthModel]),
+    SequelizeModule.forFeature([UserModel, UserAuthModel, UserLogModel]),
   ],
   controllers: [MeController],
   providers: [MeService, RolesGuard, JwtStrategy],
