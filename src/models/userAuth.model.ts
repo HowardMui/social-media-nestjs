@@ -12,7 +12,6 @@ import {
   Unique,
   UpdatedAt,
 } from 'sequelize-typescript';
-import { UserModule } from 'src/user/user.module';
 import { UserModel } from './user.model';
 import { CreationOptional, Optional } from 'sequelize';
 
@@ -52,7 +51,7 @@ export class UserAuthModel extends Model<
   userId: number;
 
   @BelongsTo(() => UserModel)
-  user: UserModule;
+  user: UserModel;
 
   @CreatedAt
   createdAt: Date;
