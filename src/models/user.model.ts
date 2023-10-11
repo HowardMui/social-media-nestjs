@@ -16,6 +16,8 @@ import {
 import { UserAuthModel, UserAuthModelType } from './userAuth.model';
 import { TimeStamp } from 'src/types';
 import { UserFollowModel } from './userFollow.model';
+import { PostModel } from './post.model';
+import { RePostModel } from './userPostAndRePost.mode';
 
 export interface UserModelType extends TimeStamp {
   userId?: number;
@@ -90,6 +92,12 @@ export class UserModel extends Model<UserModelType> {
     as: 'following',
   })
   following: UserFollowModel[];
+
+  @HasMany(() => PostModel)
+  posts: PostModel[];
+
+  @HasMany(() => RePostModel)
+  rePost: RePostModel[];
 
   @CreatedAt
   createdAt: Date;
