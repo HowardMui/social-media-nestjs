@@ -3,3 +3,4 @@ export * from './userAuth.model';
 export * from './userLog.model';
 export * from './userFollow.model';
 export * from './post.model';
+export * from './likePost.model';

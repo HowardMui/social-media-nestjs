@@ -10,7 +10,7 @@ export const errorHandler = (err: Error | any) => {
     case 'SequelizeUniqueConstraintError':
       return new ForbiddenException(err.errors[0].message);
     case 'SequelizeForeignKeyConstraintError':
-      return new NotFoundException(`${err.table} not exist`);
+      return new NotFoundException(`${err.table.slice(0, -1)} does not exist`);
     case 'SequelizeValidationError':
       return new BadRequestException(err.errors[0].message);
   }

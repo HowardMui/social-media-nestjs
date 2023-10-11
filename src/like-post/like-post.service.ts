@@ -3,60 +3,71 @@ import {
   HttpStatus,
   Injectable,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
+import { errorHandler } from 'src/error-handler';
+import { LikePostModel } from 'src/models';
 import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class LikePostService {
-  constructor(private prisma: PrismaSrcService, private redis: RedisService) {}
+  constructor(
+    private prisma: PrismaSrcService,
+    private redis: RedisService,
+    @InjectModel(LikePostModel)
+    private likedPostModel: typeof LikePostModel,
+  ) {}
   private readonly logger = new Logger(LikePostService.name);
 
   async likeAPostByUser(postId: number, userId: number) {
     try {
-      await this.prisma.userLikedPost.create({
-        data: {
+      const findUserLikedPost = await this.likedPostModel.findOne({
+        where: {
           postId,
           userId,
         },
       });
 
+      if (findUserLikedPost) {
+        return new BadRequestException('Already liked');
+      } else {
+        await this.likedPostModel.create({
+          postId,
+          userId,
+        });
+      }
+
       return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
-      if (
-        err.code === 'P2003' ||
-        err.code === 'P2025' ||
-        err.code === 'P2016'
-      ) {
-        throw new NotFoundException('Post do not exist');
-      } else if (err.code === 'P2002') {
-        throw new BadRequestException('Already liked by user');
-      } else {
-        throw err;
-      }
+      return errorHandler(err);
     }
   }
 
   async unLikeAPost(postId: number, userId: number) {
     try {
-      await this.prisma.userLikedPost.delete({
+      const findUserLikedPost = await this.likedPostModel.findOne({
         where: {
-          userId_postId: {
+          postId,
+          userId,
+        },
+      });
+
+      if (findUserLikedPost) {
+        await this.likedPostModel.destroy({
+          where: {
             postId,
             userId,
           },
-        },
-      });
+        });
+      } else {
+        return new BadRequestException('Post or likePost does not exist');
+      }
       return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
-      if (err.code === 'P2025') {
-        throw new NotFoundException('Like or post record do not exist');
-      } else {
-        throw err;
-      }
+      return errorHandler(err);
     }
   }
 }
