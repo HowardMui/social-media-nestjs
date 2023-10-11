@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { SequelizeSrcService } from './sequelize-src.service';
 import { SequelizeModule } from '@nestjs/sequelize';
 import {
+  PostModel,
   UserAuthModel,
   UserFollowModel,
   UserLogModel,
   UserModel,
 } from 'src/models';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RePostModel } from 'src/models/userPostAndRePost.mode';
 
 @Module({
   imports: [
@@ -24,7 +26,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
           autoLoadModels: true,
           synchronize: true,
           retryAttempts: 10000,
-          models: [UserModel, UserAuthModel, UserLogModel, UserFollowModel],
+          models: [
+            UserModel,
+            UserAuthModel,
+            UserLogModel,
+            UserFollowModel,
+            PostModel,
+            RePostModel,
+          ],
         };
       },
       inject: [ConfigService],
