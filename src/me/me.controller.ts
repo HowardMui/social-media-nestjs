@@ -23,10 +23,6 @@ import {
   GetMeBookMarkedPostRes,
   GetMeLikedQueryParams,
   GetMeLikedResponse,
-  GetMeFollowingResponse,
-  GetMeFollowersResponse,
-  GetMeFollowingQueryParams,
-  GetMeFollowersQueryParams,
   MeProfileResponse,
   GetMePostResponse,
   GetMePostQueryParams,
@@ -92,27 +88,6 @@ export class MeController {
   updateMe(@Req() req: Request, @Body() dto: UpdateMeProfileDTO) {
     return this.userProfileService.updateMe(req.user['userId'], dto);
   }
-
-  // @Get('followers')
-  // @ApiOkResponsePaginated(GetMeFollowersResponse)
-  // @ApiOperation({ summary: 'Get Current User followers. App User Only' })
-  // @UseGuards(AuthGuard('jwt'), RolesGuard)
-  // @Roles(Role.User)
-  // getMeFollowers(
-  //   @Req() req: Request,
-  //   @Query() query: GetMeFollowersQueryParams,
-  // ) {
-  //   return this.userProfileService.getUserFollowers(req.user['userId'], query);
-  // }
-
-  // @Get('following')
-  // @ApiOkResponsePaginated(GetMeFollowingResponse)
-  // @ApiOperation({ summary: 'Get Current User following. App User Only' })
-  // @UseGuards(AuthGuard('jwt'), RolesGuard)
-  // @Roles(Role.User)
-  // getMeFollows(@Req() req: Request, @Query() query: GetMeFollowingQueryParams) {
-  //   return this.userProfileService.getUserFollowing(req.user['userId'], query);
-  // }
 
   // * bookmark Action ------------------------------------------------------------------------------------
 

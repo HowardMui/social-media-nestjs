@@ -7,23 +7,18 @@ import {
   UserSignInDTO,
   UserSignUpDTO,
   GetMeCommentQueryParams,
-  GetMeCommentResponse,
-  GetMeFollowersResponse,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { PostResponse } from 'src/post/dto';
 import { UpdateMeProfileDTO } from './dto/me-update-profile.dto';
 import {
   formatResponseListData,
-  formatDataToRedis,
   formatDevice,
   formatListResponseObject,
 } from 'src/helper';
 import { RedisService } from 'src/redis/redis.service';
-import { ListResponse } from 'src/types';
 import { InjectModel } from '@nestjs/sequelize';
 import { UserFollowModel, UserModel } from 'src/models';
 import { UserAuthModel } from 'src/models/userAuth.model';
@@ -247,56 +242,56 @@ export class MeService {
 
     try {
       // * gmpb = get my post bookmark
-      const cachedBookmarkedData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(`gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query, userId)}`);
-      if (cachedBookmarkedData) {
-        return cachedBookmarkedData;
-      } else {
-        const [totalBookmarkedPost, bookmarkedPostList] =
-          await this.prisma.$transaction([
-            this.prisma.userBookmark.count({
-              where: {
-                userId,
-              },
-            }),
-            this.prisma.post.findMany({
-              where: {
-                bookmarkedByUser: {
-                  some: {
-                    userId,
-                  },
+      // const cachedBookmarkedData = await this.redis.getRedisValue<
+      //   ListResponse<PostResponse>
+      // >(`gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query, userId)}`);
+      // if (cachedBookmarkedData) {
+      //   return cachedBookmarkedData;
+      // } else {
+      const [totalBookmarkedPost, bookmarkedPostList] =
+        await this.prisma.$transaction([
+          this.prisma.userBookmark.count({
+            where: {
+              userId,
+            },
+          }),
+          this.prisma.post.findMany({
+            where: {
+              bookmarkedByUser: {
+                some: {
+                  userId,
                 },
               },
-              skip: offset ?? 0,
-              take: limit ?? 20,
-              include: {
-                user: true,
-                tags: true,
-                _count: {
-                  select: {
-                    likedByUser: true,
-                    comments: true,
-                    bookmarkedByUser: true,
-                    rePostOrderByUser: true,
-                  },
+            },
+            skip: offset ?? 0,
+            take: limit ?? 20,
+            include: {
+              user: true,
+              tags: true,
+              _count: {
+                select: {
+                  likedByUser: true,
+                  comments: true,
+                  bookmarkedByUser: true,
+                  rePostOrderByUser: true,
                 },
               },
-            }),
-          ]);
+            },
+          }),
+        ]);
 
-        const response = formatListResponseObject({
-          rows: bookmarkedPostList.map((post) => formatResponseListData(post)),
-          count: totalBookmarkedPost,
-          limit,
-          offset,
-        });
-        await this.redis.setRedisValue(
-          `gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
+      const response = formatListResponseObject({
+        rows: bookmarkedPostList.map((post) => formatResponseListData(post)),
+        count: totalBookmarkedPost,
+        limit,
+        offset,
+      });
+      // await this.redis.setRedisValue(
+      //   `gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query, userId)}`,
+      //   response,
+      // );
+      // return response;
+      // }
     } catch (err) {
       console.log(err);
     }
@@ -309,55 +304,55 @@ export class MeService {
 
     try {
       // * gmpl = get my post like
-      const cachedLikedPostData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(`gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`);
-      if (cachedLikedPostData) {
-        return cachedLikedPostData;
-      } else {
-        const [totalLikedPost, likedPostList] = await this.prisma.$transaction([
-          this.prisma.userLikedPost.count({
-            where: {
-              userId,
-            },
-          }),
-          this.prisma.userLikedPost.findMany({
-            where: {
-              userId,
-            },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-            select: {
-              post: {
-                include: {
-                  user: true,
-                  tags: true,
-                  _count: {
-                    select: {
-                      likedByUser: true,
-                      comments: true,
-                      bookmarkedByUser: true,
-                      rePostOrderByUser: true,
-                    },
+      // const cachedLikedPostData = await this.redis.getRedisValue<
+      //   ListResponse<PostResponse>
+      // >(`gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`);
+      // if (cachedLikedPostData) {
+      //   return cachedLikedPostData;
+      // } else {
+      const [totalLikedPost, likedPostList] = await this.prisma.$transaction([
+        this.prisma.userLikedPost.count({
+          where: {
+            userId,
+          },
+        }),
+        this.prisma.userLikedPost.findMany({
+          where: {
+            userId,
+          },
+          skip: offset ?? 0,
+          take: limit ?? 20,
+          select: {
+            post: {
+              include: {
+                user: true,
+                tags: true,
+                _count: {
+                  select: {
+                    likedByUser: true,
+                    comments: true,
+                    bookmarkedByUser: true,
+                    rePostOrderByUser: true,
                   },
                 },
               },
             },
-          }),
-        ]);
+          },
+        }),
+      ]);
 
-        const response = formatListResponseObject({
-          rows: likedPostList.map((post) => formatResponseListData(post)),
-          count: totalLikedPost,
-          limit,
-          offset,
-        });
-        await this.redis.setRedisValue(
-          `gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
+      const response = formatListResponseObject({
+        rows: likedPostList.map((post) => formatResponseListData(post)),
+        count: totalLikedPost,
+        limit,
+        offset,
+      });
+      // await this.redis.setRedisValue(
+      //   `gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`,
+      //   response,
+      // );
+      return response;
+      // }
     } catch (err) {
       console.log(err);
     }
@@ -503,86 +498,86 @@ export class MeService {
       // }
 
       // * gamp = get all my posts
-      const cachedAllMePostData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(`gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`);
-      if (cachedAllMePostData) {
-        return cachedAllMePostData;
-      } else {
-        const [postCount, postList] = await this.prisma.$transaction([
-          this.prisma.userPostOrder.count({
-            where: {
-              userId,
-            },
-          }),
-          this.prisma.userPostOrder.findMany({
-            where: {
-              userId,
-            },
-            include: {
-              post: {
-                include: {
-                  tags: {
-                    select: {
-                      tagName: true,
-                    },
+      // const cachedAllMePostData = await this.redis.getRedisValue<
+      //   ListResponse<PostResponse>
+      // >(`gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`);
+      // if (cachedAllMePostData) {
+      //   return cachedAllMePostData;
+      // } else {
+      const [postCount, postList] = await this.prisma.$transaction([
+        this.prisma.userPostOrder.count({
+          where: {
+            userId,
+          },
+        }),
+        this.prisma.userPostOrder.findMany({
+          where: {
+            userId,
+          },
+          include: {
+            post: {
+              include: {
+                tags: {
+                  select: {
+                    tagName: true,
                   },
-                  user: true,
-                  _count: {
-                    select: {
-                      likedByUser: true,
-                      comments: true,
-                      bookmarkedByUser: true,
-                      rePostOrderByUser: true,
-                    },
+                },
+                user: true,
+                _count: {
+                  select: {
+                    likedByUser: true,
+                    comments: true,
+                    bookmarkedByUser: true,
+                    rePostOrderByUser: true,
                   },
                 },
               },
-              rePost: {
-                include: {
-                  tags: {
-                    select: {
-                      tagName: true,
-                    },
+            },
+            rePost: {
+              include: {
+                tags: {
+                  select: {
+                    tagName: true,
                   },
-                  user: true,
-                  _count: {
-                    select: {
-                      likedByUser: true,
-                      comments: true,
-                      bookmarkedByUser: true,
-                      rePostOrderByUser: true,
-                    },
+                },
+                user: true,
+                _count: {
+                  select: {
+                    likedByUser: true,
+                    comments: true,
+                    bookmarkedByUser: true,
+                    rePostOrderByUser: true,
                   },
                 },
               },
-              user: true,
             },
-            orderBy: {
-              createdAt: 'desc',
-            },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-          }),
-        ]);
+            user: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          skip: offset ?? 0,
+          take: limit ?? 20,
+        }),
+      ]);
 
-        const response = formatListResponseObject({
-          rows: postList.map((post) =>
-            post.rePostId
-              ? formatResponseListData(post.rePost)
-              : formatResponseListData(post.post),
-          ),
-          count: postCount,
-          limit,
-          offset,
-        });
+      const response = formatListResponseObject({
+        rows: postList.map((post) =>
+          post.rePostId
+            ? formatResponseListData(post.rePost)
+            : formatResponseListData(post.post),
+        ),
+        count: postCount,
+        limit,
+        offset,
+      });
 
-        await this.redis.setRedisValue(
-          `gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
+      // await this.redis.setRedisValue(
+      //   `gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`,
+      //   response,
+      // );
+      return response;
+      // }
     } catch (err) {
       console.log(err);
     }
@@ -593,73 +588,71 @@ export class MeService {
 
     try {
       // * gmcl = get my comment list
-      const cachedMeCommentList = await this.redis.getRedisValue<
-        ListResponse<GetMeCommentResponse>
-      >(`gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`);
-      if (cachedMeCommentList) {
-        return cachedMeCommentList;
-      } else {
-        const [postCount, postListWithComment] = await this.prisma.$transaction(
-          [
-            this.prisma.post.count({
-              where: {
-                comments: {
-                  some: {
-                    userId,
-                  },
-                },
+      // const cachedMeCommentList = await this.redis.getRedisValue<
+      //   ListResponse<GetMeCommentResponse>
+      // >(`gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`);
+      // if (cachedMeCommentList) {
+      //   return cachedMeCommentList;
+      // } else {
+      const [postCount, postListWithComment] = await this.prisma.$transaction([
+        this.prisma.post.count({
+          where: {
+            comments: {
+              some: {
+                userId,
               },
-            }),
-            this.prisma.post.findMany({
+            },
+          },
+        }),
+        this.prisma.post.findMany({
+          where: {
+            comments: {
+              some: {
+                userId,
+              },
+            },
+          },
+          include: {
+            user: true,
+            tags: true,
+            comments: {
               where: {
-                comments: {
-                  some: {
-                    userId,
-                  },
-                },
+                userId,
               },
               include: {
-                user: true,
-                tags: true,
-                comments: {
-                  where: {
-                    userId,
-                  },
+                parentComment: {
                   include: {
-                    parentComment: {
-                      include: {
-                        user: true,
-                      },
-                    },
-                  },
-                },
-                _count: {
-                  select: {
-                    likedByUser: true,
-                    comments: true,
-                    bookmarkedByUser: true,
-                    rePostOrderByUser: true,
+                    user: true,
                   },
                 },
               },
-            }),
-          ],
-        );
+            },
+            _count: {
+              select: {
+                likedByUser: true,
+                comments: true,
+                bookmarkedByUser: true,
+                rePostOrderByUser: true,
+              },
+            },
+          },
+        }),
+      ]);
 
-        const response = formatListResponseObject({
-          count: postCount,
-          rows: postListWithComment.map((post) => formatResponseListData(post)),
-          limit,
-          offset,
-        });
+      const response = formatListResponseObject({
+        count: postCount,
+        rows: postListWithComment.map((post) => formatResponseListData(post)),
+        limit,
+        offset,
+      });
 
-        await this.redis.setRedisValue(
-          `gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`,
-          response,
-        );
+      // await this.redis.setRedisValue(
+      //   `gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`,
+      //   response,
+      // );
 
-        return response;
-      }
+      return response;
+      // }
     } catch (err) {
       console.log(err);
     }

@@ -72,7 +72,6 @@ export class MeFollowController {
     @Req() req: Request,
     @Query() query: GetMeFollowersQueryParams,
   ) {
-    // return 'hello world';
     return this.followUserService.getUserFollowers(req.user['userId'], query);
   }
 
@@ -82,6 +81,6 @@ export class MeFollowController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.User)
   getMeFollows(@Req() req: Request, @Query() query: GetMeFollowingQueryParams) {
-    // return this.userProfileService.getUserFollowing(req.user['userId'], query);
+    return this.followUserService.getUserFollowing(req.user['userId'], query);
   }
 }
