@@ -106,19 +106,6 @@ export class MeController {
     );
   }
 
-  // * like Action ------------------------------------------------------------------------------------
-  @Get('like')
-  @ApiOkResponsePaginated(GetMeLikedResponse)
-  @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  getMeLikedPost(@Query() query: GetMeLikedQueryParams, @Req() req: Request) {
-    return this.userProfileService.getMeLikedPostList(
-      query,
-      req.user['userId'],
-    );
-  }
-
   // * Find all current user post ------------------------------------------------------------------------------------
   @Get('posts')
   @ApiOkResponsePaginated(GetMePostResponse)

@@ -297,67 +297,6 @@ export class MeService {
     }
   }
 
-  // * like Action ------------------------------------------------------------------------------------
-
-  async getMeLikedPostList(query: GetMeLikedQueryParams, userId: number) {
-    const { limit, offset } = query;
-
-    try {
-      // * gmpl = get my post like
-      // const cachedLikedPostData = await this.redis.getRedisValue<
-      //   ListResponse<PostResponse>
-      // >(`gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`);
-      // if (cachedLikedPostData) {
-      //   return cachedLikedPostData;
-      // } else {
-      const [totalLikedPost, likedPostList] = await this.prisma.$transaction([
-        this.prisma.userLikedPost.count({
-          where: {
-            userId,
-          },
-        }),
-        this.prisma.userLikedPost.findMany({
-          where: {
-            userId,
-          },
-          skip: offset ?? 0,
-          take: limit ?? 20,
-          select: {
-            post: {
-              include: {
-                user: true,
-                tags: true,
-                _count: {
-                  select: {
-                    likedByUser: true,
-                    comments: true,
-                    bookmarkedByUser: true,
-                    rePostOrderByUser: true,
-                  },
-                },
-              },
-            },
-          },
-        }),
-      ]);
-
-      const response = formatListResponseObject({
-        rows: likedPostList.map((post) => formatResponseListData(post)),
-        count: totalLikedPost,
-        limit,
-        offset,
-      });
-      // await this.redis.setRedisValue(
-      //   `gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`,
-      //   response,
-      // );
-      return response;
-      // }
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
   // * Find all current user post ------------------------------------------------------------------------------------
 
   async getAllMePost(query: GetMePostQueryParams, userId: number) {
