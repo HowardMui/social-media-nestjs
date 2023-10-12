@@ -10,6 +10,7 @@ import { errorHandler } from 'src/error-handler';
 import { formatDataToRedis } from 'src/helper';
 import { GetMeLikedQueryParams } from 'src/me/dto';
 import { LikePostModel, PostModel, UserModel } from 'src/models';
+import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
 import { RePostModel } from 'src/models/userPostAndRePost.mode';
 import { PostResponse } from 'src/post/dto';
 import { RedisService } from 'src/redis/redis.service';
@@ -56,6 +57,12 @@ export class LikePostService {
                 ),
                 'likeCount',
               ],
+              [
+                Sequelize.literal(
+                  `(SELECT COUNT(*) FROM bookmarkPost WHERE bookmarkPost.postId = PostModel.postId)`,
+                ),
+                'bookmarkedCount',
+              ],
             ],
           },
           include: [
@@ -66,6 +73,10 @@ export class LikePostService {
             },
             {
               model: RePostModel,
+              attributes: [],
+            },
+            {
+              model: BookmarkPostModel,
               attributes: [],
             },
             {
