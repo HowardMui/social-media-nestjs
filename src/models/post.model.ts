@@ -15,6 +15,7 @@ import { TimeStamp } from 'src/types';
 import { UserModel, UserModelType } from './user.model';
 import { RePostModel } from './userPostAndRePost.mode';
 import { LikePostModel } from './likePost.model';
+import { BookmarkPostModel } from './bookmarkPost.model';
 
 export interface PostModelType extends TimeStamp {
   postId: number;
@@ -55,6 +56,9 @@ export class PostModel extends Model<PostModelType> {
 
   @HasMany(() => LikePostModel)
   likedPostByUser: LikePostModel[];
+
+  @HasMany(() => BookmarkPostModel)
+  bookmarkedPostByUser: BookmarkPostModel[];
 
   @CreatedAt
   createdAt: Date;

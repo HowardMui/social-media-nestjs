@@ -51,7 +51,6 @@ export class LikePostController {
 export class MeLikedPostController {
   constructor(private likeService: LikePostService) {}
 
-  // * like Action ------------------------------------------------------------------------------------
   @Get('like')
   @ApiOkResponsePaginated(GetMeLikedResponse)
   @ApiOperation({ summary: 'List all bookmarked post. App User Only' })

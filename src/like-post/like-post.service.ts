@@ -12,14 +12,12 @@ import { GetMeLikedQueryParams } from 'src/me/dto';
 import { LikePostModel, PostModel, UserModel } from 'src/models';
 import { RePostModel } from 'src/models/userPostAndRePost.mode';
 import { PostResponse } from 'src/post/dto';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { RedisService } from 'src/redis/redis.service';
 import { ListResponse, RedisKey } from 'src/types';
 
 @Injectable()
 export class LikePostService {
   constructor(
-    private prisma: PrismaSrcService,
     private redis: RedisService,
     @InjectModel(LikePostModel)
     private likedPostModel: typeof LikePostModel,

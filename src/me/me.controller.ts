@@ -89,23 +89,6 @@ export class MeController {
     return this.userProfileService.updateMe(req.user['userId'], dto);
   }
 
-  // * bookmark Action ------------------------------------------------------------------------------------
-
-  @Get('bookmark')
-  @ApiOkResponsePaginated(GetMeBookMarkedPostRes)
-  @ApiOperation({ summary: 'List all bookmarked post. App User Only' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  getMeBookmarkList(
-    @Query() query: GetMeBookmarkedQueryParams,
-    @Req() req: Request,
-  ) {
-    return this.userProfileService.getAllMeBookmarkList(
-      query,
-      req.user['userId'],
-    );
-  }
-
   // * Find all current user post ------------------------------------------------------------------------------------
   @Get('posts')
   @ApiOkResponsePaginated(GetMePostResponse)

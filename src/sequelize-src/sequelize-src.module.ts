@@ -11,6 +11,7 @@ import {
 } from 'src/models';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RePostModel } from 'src/models/userPostAndRePost.mode';
+import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { RePostModel } from 'src/models/userPostAndRePost.mode';
             PostModel,
             RePostModel,
             LikePostModel,
+            BookmarkPostModel,
           ],
         };
       },
