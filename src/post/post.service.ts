@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConsoleLogger,
   HttpStatus,
   Injectable,
   Logger,
@@ -11,15 +12,42 @@ import {
   GetPostQueryParamsWithFilter,
   PostResponse,
 } from './dto';
-import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
+import {
+  orderByFilter,
+  returnAscOrDescInQueryParamsWithFilter,
+} from 'src/helper';
 import { Tag } from '@prisma/client';
 import { ListResponse } from 'src/types';
 import { RedisService } from 'src/redis/redis.service';
 import { formatDataToRedis } from 'src/helper/format-data-to-redis';
+import { Sequelize } from 'sequelize-typescript';
+import { InjectModel } from '@nestjs/sequelize';
+import {
+  LikePostModel,
+  PostModel,
+  PostTagModel,
+  TagModel,
+  UserModel,
+} from 'src/models';
+import { includes } from 'lodash';
+import { Op } from 'sequelize';
+import { errorHandler } from 'src/error-handler';
+import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
+import { RePostModel } from 'src/models/userPostAndRePost.mode';
 
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaSrcService, private redis: RedisService) {}
+  constructor(
+    private prisma: PrismaSrcService,
+    private redis: RedisService,
+    @InjectModel(PostModel)
+    private postModel: typeof PostModel,
+    @InjectModel(TagModel)
+    private tagModel: typeof TagModel,
+    @InjectModel(PostTagModel)
+    private postTagModel: typeof PostTagModel,
+    private sequelize: Sequelize,
+  ) {}
   private readonly logger = new Logger(PostService.name);
 
   // * Basic CRUD ------------------------------------------------------------------------------------
@@ -28,79 +56,100 @@ export class PostService {
     const { limit, offset, asc, desc, userName } = query;
     try {
       // * check if data is in cache:
-      const cachedData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(`gap${formatDataToRedis<GetPostQueryParamsWithFilter>(query)}`);
-      if (cachedData) {
-        return cachedData;
-      } else {
-        const [totalPosts, findPosts] = await this.prisma.$transaction([
-          this.prisma.post.count({
-            where: {
-              OR: [
-                {
-                  user: {
-                    userName: {
-                      contains: userName ? userName : undefined,
-                    },
-                  },
-                },
-              ],
-            },
-          }),
-          this.prisma.post.findMany({
-            where: {
-              OR: [
-                {
-                  user: {
-                    userName: {
-                      contains: userName ? userName : undefined,
-                    },
-                  },
-                },
-              ],
-            },
-            orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
-              postId: 'desc',
-            },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-            include: {
-              user: true,
-              tags: true,
-              _count: {
-                select: {
-                  likedByUser: true,
-                  comments: true,
-                  bookmarkedByUser: true,
-                  rePostOrderByUser: true,
-                },
-              },
-            },
-          }),
-        ]);
+      // const cachedData = await this.redis.getRedisValue<
+      //   ListResponse<PostResponse>
+      // >(`gap${formatDataToRedis<GetPostQueryParamsWithFilter>(query)}`);
+      // if (cachedData) {
+      //   return cachedData;
+      // } else {
+      //   await this.redis.setRedisValue(
+      //     `gap${formatDataToRedis<GetPostQueryParamsWithFilter>(query)}`,
+      //     returnObject,
+      //   );
+      // }
 
-        const transformedPosts = findPosts.map(({ _count, tags, ...post }) => ({
-          ...post,
-          tags: tags.map((t) => t.tagName),
-          likedCount: _count.likedByUser,
-          commentCount: _count.comments,
-          bookmarkedCount: _count.bookmarkedByUser,
-          rePostedCount: _count.rePostOrderByUser,
-        }));
+      // ! Sequelize test format the tagName sql
 
-        const returnObject = {
-          count: totalPosts,
-          rows: transformedPosts,
-          limit: limit ?? 20,
-          offset: offset ?? 0,
-        };
-        await this.redis.setRedisValue(
-          `gap${formatDataToRedis<GetPostQueryParamsWithFilter>(query)}`,
-          returnObject,
-        );
-        return returnObject;
-      }
+      //     [
+      //       Sequelize.literal(
+      //         `(SELECT JSON_ARRAY(JSON_EXTRACT(GROUP_CONCAT(JSON_OBJECT('tagName', Tag.tagName)), '$[*].tagName')) FROM tag AS Tag INNER JOIN post_tag AS pt ON Tag.tagId = pt.tagId WHERE pt.postId = PostModel.postId)`,
+      //       ),
+      //       'tagName',
+      //     ],
+      const { count, rows } = await this.postModel.findAndCountAll({
+        distinct: true,
+        order: orderByFilter(asc, desc) ?? [['postId', 'DESC']],
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_bookmarkPost AS bp WHERE bp.postId = PostModel.postId)`,
+              ),
+              'bookmarkedCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_rePost AS rp WHERE rp.postId = PostModel.postId)`,
+              ),
+              'rePostedCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_likePost AS lp WHERE lp.postId = PostModel.postId)`,
+              ),
+              'likedCount',
+            ],
+          ],
+        },
+        include: [
+          {
+            model: TagModel,
+            attributes: ['tagId', 'tagName'],
+            through: { attributes: [] },
+          },
+          {
+            model: UserModel,
+            as: 'bookmarkedPostByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'likedPostByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'rePostedByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'user',
+          },
+        ],
+        // group: ['PostModel.postId', 'tags.tagId'],
+      });
+
+      return {
+        count: count,
+        rows,
+        limit: limit ?? 0,
+        offset: offset ?? 20,
+      };
+
+      // return {
+      //   count,
+      //   rows: rows.map((el) => {
+      //     const { tags, ...rest } = el.toJSON();
+      //     return {
+      //       ...rest,
+      //       tags: tags.map((tag) => tag.tagName),
+      //     };
+      //   }),
+      //   // rows,
+      //   limit: limit ?? 0,
+      //   offset: offset ?? 20,
+      // };
     } catch (err) {
       console.log(err);
       if (err.message.includes('Unknown arg')) {
@@ -126,42 +175,74 @@ export class PostService {
       //   `;
       // return fineOnePost;
 
-      // * origin
-      const findAPost = await this.prisma.post.findUnique({
-        where: {
-          postId,
+      const post = await this.postModel.findByPk(postId, {
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_bookmarkPost AS bp WHERE bp.postId = PostModel.postId)`,
+              ),
+              'bookmarkedCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_rePost AS rp WHERE rp.postId = PostModel.postId)`,
+              ),
+              'rePostedCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_likePost AS lp WHERE lp.postId = PostModel.postId)`,
+              ),
+              'likedCount',
+            ],
+          ],
         },
-        include: {
-          tags: true,
-          comments: true,
-          user: true,
-          _count: {
-            select: {
-              likedByUser: true,
-              comments: true,
-              bookmarkedByUser: true,
-              rePostOrderByUser: true,
-            },
+        include: [
+          {
+            model: TagModel,
+            attributes: ['tagId', 'tagName'],
+            through: { attributes: [] },
           },
-        },
+          {
+            model: UserModel,
+            as: 'bookmarkedPostByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'likedPostByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'rePostedByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'user',
+          },
+        ],
+        // group: ['tags.tagId'],
       });
-      if (!findAPost) {
+      // .then((posts) => {
+      //   return posts.toJSON().map(({tags, ...rest}) => {
+      //     return {
+      //       ...rest,
+      //       tags: tags.flatMap((tag) => tag),
+      //     };
+      //   })
+      // });
+
+      if (!post) {
         return new NotFoundException('Post do not exist');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { _count, tags, comments, ...rest } = findAPost;
-      const transformedPosts = {
-        tags: tags.map((t) => t.tagName),
-        likedCount: _count.likedByUser,
-        commentCount: _count.comments,
-        bookmarkedCount: _count.bookmarkedByUser,
-        rePostedCount: _count.rePostOrderByUser,
-      };
-      return { ...rest, ...transformedPosts };
+      return post;
     } catch (err) {
       console.log(err);
-      throw err;
+      return errorHandler(err);
     }
   }
 
@@ -169,76 +250,52 @@ export class PostService {
     const { tagName, ...postBody } = body;
 
     try {
-      let existedTags: Tag[] = [];
-      let willBeCreatedTag: string[] = [];
-
-      // * Filter exist nor not-exist tag
-      if (tagName && tagName.length > 0) {
-        existedTags = await this.prisma.tag.findMany({
-          where: {
-            tagName: {
-              in: tagName,
-            },
-          },
-        });
-
-        willBeCreatedTag = tagName.filter(
-          (tag) => !existedTags.some((existTag) => existTag.tagName === tag),
+      await this.sequelize.transaction(async (t) => {
+        const transactionHost = { transaction: t };
+        const postTags = await Promise.all(
+          tagName.map((tagName) =>
+            TagModel.findOrCreate({ where: { tagName }, ...transactionHost }),
+          ),
         );
-      }
 
-      await this.prisma.$transaction(async (tx) => {
-        // * Create a new post
-        const createdPost = await tx.post.create({
-          data: {
+        const createdPost = await this.postModel.create(
+          {
             ...postBody,
             userId,
-            tags:
-              tagName && tagName.length > 0
-                ? {
-                    connect: existedTags.map((tag) => ({
-                      tagName: tag.tagName,
-                    })),
-                    create: willBeCreatedTag.map((tag) => ({
-                      tagName: tag,
-                    })),
-                  }
-                : undefined,
           },
-          include: {
-            tags: true,
-            postOrderByUser: true,
-          },
-        });
+          transactionHost,
+        );
 
-        if (createdPost) {
-          await tx.userPostOrder.create({
-            data: {
+        await this.postTagModel.bulkCreate(
+          postTags.map((tag) => {
+            return {
               postId: createdPost.postId,
-              userId,
-            },
-          });
-        }
+              tagId: tag[0].tagId,
+            };
+          }),
+          transactionHost,
+        );
       });
+
       return HttpStatus.CREATED;
     } catch (err) {
       console.log(err);
+      return errorHandler(err);
     }
   }
 
   async deleteOnePost(postId: number) {
     try {
-      await this.prisma.post.delete({
-        where: { postId },
+      await this.postModel.destroy({
+        where: {
+          postId,
+        },
       });
 
       return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
-      if (err.code === 'P2025' || err.code === 'P2016') {
-        throw new NotFoundException('Post do not exist');
-      }
-      throw err;
+      return errorHandler(err);
     }
   }
 }

@@ -2,8 +2,11 @@ import { Module } from '@nestjs/common';
 import { SequelizeSrcService } from './sequelize-src.service';
 import { SequelizeModule } from '@nestjs/sequelize';
 import {
+  CommentModel,
   LikePostModel,
   PostModel,
+  PostTagModel,
+  TagModel,
   UserAuthModel,
   UserFollowModel,
   UserLogModel,
@@ -37,6 +40,9 @@ import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
             RePostModel,
             LikePostModel,
             BookmarkPostModel,
+            TagModel,
+            CommentModel,
+            PostTagModel,
           ],
         };
       },

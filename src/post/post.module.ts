@@ -3,10 +3,13 @@ import { PostService } from './post.service';
 import { PostController } from './post.controller';
 import { RedisModule } from 'src/redis/redis.module';
 import { SequelizeModule } from '@nestjs/sequelize';
-import { PostModel } from 'src/models';
+import { PostModel, PostTagModel, TagModel } from 'src/models';
 
 @Module({
-  imports: [RedisModule, SequelizeModule.forFeature([PostModel])],
+  imports: [
+    RedisModule,
+    SequelizeModule.forFeature([PostModel, TagModel, PostTagModel]),
+  ],
   providers: [PostService],
   controllers: [PostController],
 })
