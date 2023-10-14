@@ -9,9 +9,7 @@ import { Sequelize } from 'sequelize';
 import { errorHandler } from 'src/error-handler';
 import { formatDataToRedis } from 'src/helper';
 import { GetMeLikedQueryParams } from 'src/me/dto';
-import { LikePostModel, PostModel, UserModel } from 'src/models';
-import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
-import { RePostModel } from 'src/models/userPostAndRePost.mode';
+import { LikePostModel, PostModel, TagModel, UserModel } from 'src/models';
 import { PostResponse } from 'src/post/dto';
 import { RedisService } from 'src/redis/redis.service';
 import { ListResponse, RedisKey } from 'src/types';
@@ -30,78 +28,95 @@ export class LikePostService {
   async getMeLikedPostList(query: GetMeLikedQueryParams, userId: number) {
     const { limit, offset } = query;
     try {
-      const cachedLikedPostData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(
-        formatDataToRedis<GetMeLikedQueryParams>({
-          filter: query,
-          keyword: RedisKey.讚好,
-          userId,
-        }),
-      );
-      if (cachedLikedPostData) {
-        return cachedLikedPostData;
-      } else {
-        const { count, rows } = await this.postModel.findAndCountAll({
-          attributes: {
-            include: [
-              [
-                Sequelize.literal(
-                  `(SELECT COUNT(*) FROM rePosts WHERE rePosts.postId = PostModel.postId)`,
-                ),
-                'rePostCount',
-              ],
-              [
-                Sequelize.literal(
-                  `(SELECT COUNT(*) FROM likePost WHERE likePost.postId = PostModel.postId)`,
-                ),
-                'likeCount',
-              ],
-              [
-                Sequelize.literal(
-                  `(SELECT COUNT(*) FROM bookmarkPost WHERE bookmarkPost.postId = PostModel.postId)`,
-                ),
-                'bookmarkedCount',
-              ],
-            ],
-          },
+      // const cachedLikedPostData = await this.redis.getRedisValue<
+      //   ListResponse<PostResponse>
+      // >(
+      //   formatDataToRedis<GetMeLikedQueryParams>({
+      //     filter: query,
+      //     keyword: RedisKey.讚好,
+      //     userId,
+      //   }),
+      // );
+      // if (cachedLikedPostData) {
+      //   return cachedLikedPostData;
+      // } else {
+      const { count, rows } = await this.postModel.findAndCountAll({
+        distinct: true,
+        attributes: {
           include: [
-            {
-              model: LikePostModel,
-              where: { userId },
-              attributes: [],
-            },
-            {
-              model: RePostModel,
-              attributes: [],
-            },
-            {
-              model: BookmarkPostModel,
-              attributes: [],
-            },
-            {
-              model: UserModel,
-            },
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_rePost AS rp WHERE rp.postId = PostModel.postId)`,
+              ),
+              'rePostCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_likePost AS lp WHERE lp.postId = PostModel.postId)`,
+              ),
+              'likedCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_bookmarkPost AS bp WHERE bp.postId = PostModel.postId)`,
+              ),
+              'bookmarkedCount',
+            ],
           ],
-          group: ['PostModel.postId'],
-        });
+        },
+        include: [
+          {
+            model: UserModel,
+            where: { userId },
+            as: 'likedPostByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'rePostedByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'bookmarkedPostByUser',
+            attributes: [],
+          },
+          {
+            model: TagModel,
+            attributes: ['tagId', 'tagName'],
+            through: { attributes: [] },
+          },
+          {
+            model: UserModel,
+            as: 'user',
+          },
+        ],
+        order: [
+          [
+            { model: UserModel, as: 'likedPostByUser' },
+            LikePostModel,
+            'createdAt',
+            'desc',
+          ],
+        ],
+      });
 
-        const response = {
-          count: count.length,
-          rows,
-          limit: limit ?? 0,
-          offset: offset ?? 20,
-        };
-        await this.redis.setRedisValue(
-          formatDataToRedis<GetMeLikedQueryParams>({
-            filter: query,
-            keyword: RedisKey.讚好,
-            userId,
-          }),
-          response,
-        );
-        return response;
-      }
+      const response = {
+        count: count,
+        rows,
+        limit: limit ?? 0,
+        offset: offset ?? 20,
+      };
+      // await this.redis.setRedisValue(
+      //   formatDataToRedis<GetMeLikedQueryParams>({
+      //     filter: query,
+      //     keyword: RedisKey.讚好,
+      //     userId,
+      //   }),
+      //   response,
+      // );
+      return response;
+      // }
     } catch (err) {
       console.log(err);
       return errorHandler(err);

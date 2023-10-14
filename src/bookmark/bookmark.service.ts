@@ -4,7 +4,7 @@ import { Sequelize } from 'sequelize-typescript';
 import { errorHandler } from 'src/error-handler';
 import { formatDataToRedis } from 'src/helper';
 import { GetMeBookmarkedQueryParams } from 'src/me/dto';
-import { LikePostModel, PostModel, UserModel } from 'src/models';
+import { LikePostModel, PostModel, TagModel, UserModel } from 'src/models';
 import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
 import { RePostModel } from 'src/models/userPostAndRePost.mode';
 import { PostResponse } from 'src/post/dto';
@@ -27,80 +27,98 @@ export class BookmarkService {
   ) {
     const { limit, offset } = query;
     try {
-      const cachedBookmarkPostData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(
-        formatDataToRedis<GetMeBookmarkedQueryParams>({
-          filter: query,
-          keyword: RedisKey.書籤,
-          userId,
-        }),
-      );
-      if (cachedBookmarkPostData) {
-        return cachedBookmarkPostData;
-      } else {
-        const { count, rows } = await this.postModel.findAndCountAll({
-          attributes: {
-            include: [
-              [
-                Sequelize.literal(
-                  `(SELECT COUNT(*) FROM rePosts WHERE rePosts.postId = PostModel.postId)`,
-                ),
-                'rePostedCount',
-              ],
-              [
-                Sequelize.literal(
-                  `(SELECT COUNT(*) FROM likePost WHERE likePost.postId = PostModel.postId)`,
-                ),
-                'likedCount',
-              ],
-              [
-                Sequelize.literal(
-                  `(SELECT COUNT(*) FROM bookmarkPost WHERE bookmarkPost.postId = PostModel.postId)`,
-                ),
-                'bookmarkedCount',
-              ],
-            ],
-          },
+      // const cachedBookmarkPostData = await this.redis.getRedisValue<
+      //   ListResponse<PostResponse>
+      // >(
+      //   formatDataToRedis<GetMeBookmarkedQueryParams>({
+      //     filter: query,
+      //     keyword: RedisKey.書籤,
+      //     userId,
+      //   }),
+      // );
+      // if (cachedBookmarkPostData) {
+      //   return cachedBookmarkPostData;
+      // } else {
+
+      const { count, rows } = await this.postModel.findAndCountAll({
+        distinct: true,
+        attributes: {
           include: [
-            {
-              model: BookmarkPostModel,
-              where: { userId },
-              attributes: [],
-            },
-            {
-              model: LikePostModel,
-              attributes: [],
-            },
-            {
-              model: RePostModel,
-              attributes: [],
-            },
-            {
-              model: UserModel,
-            },
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_bookmarkPost AS bp WHERE bp.postId = PostModel.postId)`,
+              ),
+              'bookmarkedCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_rePost AS rp WHERE rp.postId = PostModel.postId)`,
+              ),
+              'rePostedCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_likePost AS lp WHERE lp.postId = PostModel.postId)`,
+              ),
+              'likedCount',
+            ],
           ],
-          group: ['bookmarkedPostByUser.id'],
-        });
+        },
+        include: [
+          {
+            model: UserModel,
+            where: { userId },
+            as: 'bookmarkedPostByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'likedPostByUser',
+            attributes: [],
+          },
+          {
+            model: UserModel,
+            as: 'rePostedByUser',
+            attributes: [],
+          },
+          {
+            model: TagModel,
+            attributes: ['tagId', 'tagName'],
+            through: { attributes: [] },
+          },
+          {
+            model: UserModel,
+            as: 'user',
+          },
+        ],
+        order: [
+          [
+            { model: UserModel, as: 'bookmarkedPostByUser' },
+            BookmarkPostModel,
+            'createdAt',
+            'desc',
+          ],
+        ],
+      });
 
-        const response = {
-          count: count.length,
-          rows,
-          limit: limit ?? 0,
-          offset: offset ?? 20,
-        };
+      const response = {
+        count: count,
+        rows,
+        limit: limit ?? 0,
+        offset: offset ?? 20,
+      };
 
-        await this.redis.setRedisValue(
-          formatDataToRedis<GetMeBookmarkedQueryParams>({
-            filter: query,
-            keyword: RedisKey.書籤,
-            userId,
-          }),
-          response,
-        );
+      // await this.redis.setRedisValue(
+      //   formatDataToRedis<GetMeBookmarkedQueryParams>({
+      //     filter: query,
+      //     keyword: RedisKey.書籤,
+      //     userId,
+      //   }),
+      //   response,
+      // );
 
-        return response;
-      }
+      return response;
+      // }
     } catch (err) {
       console.log(err);
     }

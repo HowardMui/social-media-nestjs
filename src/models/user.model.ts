@@ -1,9 +1,11 @@
 import {
   AutoIncrement,
+  BelongsToMany,
   Column,
   CreatedAt,
   DataType,
   DeletedAt,
+  ForeignKey,
   HasMany,
   Index,
   IsEmail,
@@ -98,14 +100,32 @@ export class UserModel extends Model<UserModelType> {
   @HasMany(() => PostModel)
   posts: PostModel[];
 
-  @HasMany(() => RePostModel)
+  // @HasMany(() => RePostModel)
+  // rePost: RePostModel[];
+
+  @BelongsToMany(() => PostModel, {
+    through: () => RePostModel,
+    foreignKey: 'userId',
+    otherKey: 'postId',
+    as: 'userRePosts',
+  })
   rePost: RePostModel[];
 
-  @HasMany(() => LikePostModel)
-  likedPosts: LikePostModel[];
+  @BelongsToMany(() => PostModel, {
+    through: () => LikePostModel,
+    foreignKey: 'userId',
+    otherKey: 'postId',
+    as: 'likedPosts',
+  })
+  likedPosts: PostModel[];
 
-  @HasMany(() => BookmarkPostModel)
-  bookmarkedPosts: BookmarkPostModel[];
+  @BelongsToMany(() => PostModel, {
+    through: () => BookmarkPostModel,
+    foreignKey: 'userId',
+    otherKey: 'postId',
+    as: 'bookmarkedPosts',
+  })
+  bookmarkedPosts: PostModel[];
 
   @CreatedAt
   createdAt: Date;

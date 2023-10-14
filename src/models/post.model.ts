@@ -1,6 +1,7 @@
 import {
   AutoIncrement,
   BelongsTo,
+  BelongsToMany,
   Column,
   CreatedAt,
   DataType,
@@ -16,6 +17,9 @@ import { UserModel, UserModelType } from './user.model';
 import { RePostModel } from './userPostAndRePost.mode';
 import { LikePostModel } from './likePost.model';
 import { BookmarkPostModel } from './bookmarkPost.model';
+import { TagModel } from './tag.model';
+import { PostTagModel } from './postTag.model';
+// import { PostTagModel } from './postTag.model';
 
 export interface PostModelType extends TimeStamp {
   postId: number;
@@ -23,6 +27,7 @@ export interface PostModelType extends TimeStamp {
   content: string;
   userId: number;
   user: UserModelType;
+  tags: TagModel[];
 }
 
 @Table({ tableName: 'posts' })
@@ -51,14 +56,32 @@ export class PostModel extends Model<PostModelType> {
   @BelongsTo(() => UserModel)
   user: UserModel;
 
-  @HasMany(() => RePostModel)
-  rePost: RePostModel[];
+  @BelongsToMany(() => UserModel, {
+    through: () => RePostModel,
+    foreignKey: 'postId',
+    otherKey: 'userId',
+    as: 'rePostedByUser',
+  })
+  rePostedByUser: UserModel[];
 
-  @HasMany(() => LikePostModel)
-  likedPostByUser: LikePostModel[];
+  @BelongsToMany(() => UserModel, {
+    through: () => LikePostModel,
+    foreignKey: 'postId',
+    otherKey: 'userId',
+    as: 'likedPostByUser',
+  })
+  likedPostByUser: UserModel[];
 
-  @HasMany(() => BookmarkPostModel)
-  bookmarkedPostByUser: BookmarkPostModel[];
+  @BelongsToMany(() => UserModel, {
+    through: () => BookmarkPostModel,
+    foreignKey: 'postId',
+    otherKey: 'userId',
+    as: 'bookmarkedPostByUser',
+  })
+  bookmarkedPostByUser: UserModel[];
+
+  @BelongsToMany(() => TagModel, () => PostTagModel)
+  tags: TagModel[];
 
   @CreatedAt
   createdAt: Date;
