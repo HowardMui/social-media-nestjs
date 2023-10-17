@@ -28,9 +28,11 @@ import { UserLogModel } from 'src/models/userLog.model';
 import {
   findMeFollowingPostAndRePost,
   findMeFollowingPostAndRePostCount,
-  findMePostAndRePost,
-  findMePostAndRePostCount,
 } from 'src/rawSQLquery';
+import {
+  userPostAndRePost,
+  userPostAndRePostCount,
+} from 'src/rawSQLquery/user.rawQuery';
 
 @Injectable()
 export class MeService {
@@ -186,12 +188,16 @@ export class MeService {
         attributes: {
           include: [
             [
-              Sequelize.fn('COUNT', Sequelize.col('followers.followingId')),
-              'followersCount',
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM userFollows AS uf WHERE uf.followerId = UserModel.userId)`,
+              ),
+              'followingCount',
             ],
             [
-              Sequelize.fn('COUNT', Sequelize.col('following.followerId')),
-              'followingCount',
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM userFollows AS uf WHERE uf.followingId = UserModel.userId)`,
+              ),
+              'followerCount',
             ],
           ],
         },
@@ -207,7 +213,6 @@ export class MeService {
             attributes: [],
           },
         ],
-        group: ['followers.followingId', 'following.followerId'],
       });
       // await this.redis.setRedisValue(`gmpf`, currentUser);
       return currentUser;
@@ -290,18 +295,15 @@ export class MeService {
 
       // TODO raw sequelize SQL
       const response = await this.sequelize.query(
-        findMePostAndRePost({ userId, limit, offset }),
+        userPostAndRePost({ userId, limit, offset }),
         {
           nest: true,
         },
       );
 
-      const count = await this.sequelize.query(
-        findMePostAndRePostCount(userId),
-        {
-          plain: true,
-        },
-      );
+      const count = await this.sequelize.query(userPostAndRePostCount(userId), {
+        plain: true,
+      });
 
       return {
         count: count.count,
