@@ -62,6 +62,17 @@ export class BookmarkService {
               ),
               'likedCount',
             ],
+            [
+              Sequelize.literal(
+                `(COALESCE(
+                  (SELECT 
+                  JSON_ARRAYAGG(t.tagName)
+                  FROM tag AS t INNER JOIN post_tag AS pt ON t.tagId = pt.tagId WHERE pt.postId = PostModel.postId),
+                  CAST('[]' AS JSON))
+                  )`,
+              ),
+              'tags',
+            ],
           ],
         },
         include: [
@@ -83,8 +94,6 @@ export class BookmarkService {
           },
           {
             model: TagModel,
-            attributes: ['tagId', 'tagName'],
-            through: { attributes: [] },
           },
           {
             model: UserModel,

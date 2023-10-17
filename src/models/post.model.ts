@@ -19,7 +19,6 @@ import { LikePostModel } from './likePost.model';
 import { BookmarkPostModel } from './bookmarkPost.model';
 import { TagModel } from './tag.model';
 import { PostTagModel } from './postTag.model';
-// import { PostTagModel } from './postTag.model';
 
 export interface PostModelType extends TimeStamp {
   postId: number;
@@ -81,7 +80,7 @@ export class PostModel extends Model<PostModelType> {
   bookmarkedPostByUser: UserModel[];
 
   @BelongsToMany(() => TagModel, () => PostTagModel)
-  tags: TagModel[];
+  postTags: TagModel[];
 
   @CreatedAt
   createdAt: Date;

@@ -16,7 +16,6 @@ import {
   orderByFilter,
   returnAscOrDescInQueryParamsWithFilter,
 } from 'src/helper';
-import { Tag } from '@prisma/client';
 import { ListResponse } from 'src/types';
 import { RedisService } from 'src/redis/redis.service';
 import { formatDataToRedis } from 'src/helper/format-data-to-redis';
@@ -29,11 +28,7 @@ import {
   TagModel,
   UserModel,
 } from 'src/models';
-import { includes } from 'lodash';
-import { Op } from 'sequelize';
 import { errorHandler } from 'src/error-handler';
-import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
-import { RePostModel } from 'src/models/userPostAndRePost.mode';
 
 @Injectable()
 export class PostService {
@@ -99,13 +94,23 @@ export class PostService {
               ),
               'likedCount',
             ],
+            [
+              Sequelize.literal(
+                `(COALESCE(
+                  (SELECT 
+                  JSON_ARRAYAGG(t.tagName)
+                  FROM tag AS t INNER JOIN post_tag AS pt ON t.tagId = pt.tagId WHERE pt.postId = PostModel.postId),
+                  CAST('[]' AS JSON))
+                  )`,
+              ),
+              'tags',
+            ],
           ],
         },
         include: [
           {
             model: TagModel,
-            attributes: ['tagId', 'tagName'],
-            through: { attributes: [] },
+            attributes: [],
           },
           {
             model: UserModel,
@@ -164,17 +169,6 @@ export class PostService {
 
   async getOnePost(postId: number) {
     try {
-      //TODO Test get all post tag with SQL
-      // const fineOnePost = await this.prisma.$queryRaw`
-      // SELECT "Post".*, JSON_AGG(DISTINCT jsonb_build_object('tagId',"Tag"."tagId", 'tagName',"Tag"."tagName")) AS "tags"
-      //   FROM "Post"
-      //   LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-      //   LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-      //   WHERE "Post"."postId" = ${postId}
-      //   GROUP BY "Post"."postId"
-      //   `;
-      // return fineOnePost;
-
       const post = await this.postModel.findByPk(postId, {
         attributes: {
           include: [
@@ -196,13 +190,23 @@ export class PostService {
               ),
               'likedCount',
             ],
+            [
+              Sequelize.literal(
+                `(COALESCE(
+                  (SELECT 
+                  JSON_ARRAYAGG(t.tagName)
+                  FROM tag AS t INNER JOIN post_tag AS pt ON t.tagId = pt.tagId WHERE pt.postId = PostModel.postId),
+                  CAST('[]' AS JSON))
+                  )`,
+              ),
+              'tags',
+            ],
           ],
         },
         include: [
           {
             model: TagModel,
-            attributes: ['tagId', 'tagName'],
-            through: { attributes: [] },
+            attributes: [],
           },
           {
             model: UserModel,
@@ -224,16 +228,7 @@ export class PostService {
             as: 'user',
           },
         ],
-        // group: ['tags.tagId'],
       });
-      // .then((posts) => {
-      //   return posts.toJSON().map(({tags, ...rest}) => {
-      //     return {
-      //       ...rest,
-      //       tags: tags.flatMap((tag) => tag),
-      //     };
-      //   })
-      // });
 
       if (!post) {
         return new NotFoundException('Post do not exist');
