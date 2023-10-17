@@ -172,6 +172,8 @@ export class FollowUserActionService {
         return cacheFollowingData;
       } else {
         const { count, rows } = await this.userModel.findAndCountAll({
+          limit: limit ?? 20,
+          offset: offset ?? 0,
           attributes: {
             include: [
               [

@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  HttpStatus,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { errorHandler } from 'src/error-handler';
 import { RePostModel } from 'src/models/userPostAndRePost.mode';
@@ -19,37 +14,12 @@ export class SharePostService {
     private rePostModel: typeof RePostModel,
   ) {}
 
-  async rePostAPostToCurrentUserBlog(postId: number, userId: number) {
+  async rePostAPostToCurrentUserBlog(rePostId: number, userId: number) {
     try {
-      // await this.prisma.$transaction(async (tx) => {
-      // const createRePost = await tx.userRePost.create({
-      //   data: {
-      //     postId,
-      //     userId,
-      //   },
-      //   include: {
-      //     post: {
-      //       include: {
-      //         postOrderByUser: true,
-      //       },
-      //     },
-      //   },
-      // });
-
       // * Create the post order in userPostOrder table
-      // if (createRePost) {
-      //   await tx.userPostOrder.create({
-      //     data: {
-      //       rePostId: postId,
-      //       userId,
-      //     },
-      //   });
-      //   // }
-      // });
-
       const findUserRePost = await this.rePostModel.findOne({
         where: {
-          postId,
+          postId: rePostId,
           userId,
         },
       });
@@ -58,7 +28,7 @@ export class SharePostService {
         return new BadRequestException('Already rePosted');
       } else {
         await this.rePostModel.create({
-          postId,
+          postId: rePostId,
           userId,
         });
       }

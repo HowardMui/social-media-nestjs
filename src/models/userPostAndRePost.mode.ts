@@ -1,4 +1,5 @@
 import {
+  BelongsTo,
   Column,
   DataType,
   ForeignKey,
@@ -17,7 +18,10 @@ export interface RePostModelType extends TimeStamp {
 @Table({ tableName: 'user_rePost' })
 export class RePostModel extends Model<RePostModelType> {
   @ForeignKey(() => PostModel)
-  @Column(DataType.INTEGER)
+  @Column({
+    allowNull: true,
+    type: DataType.INTEGER,
+  })
   postId: number;
 
   @ForeignKey(() => UserModel)
