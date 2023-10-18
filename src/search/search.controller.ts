@@ -19,10 +19,10 @@ export class SearchController {
     content: {
       'application/json': {
         schema: {
-          anyOf: refs(PostResponse, GetAllTagResponse, GetUserListResponse),
+          anyOf: refs(GetAllTagResponse, GetUserListResponse),
         },
         examples: {
-          post: { value: { ...PostResponseExampleDTO } },
+          // post: { value: { ...PostResponseExampleDTO } },
           users: { value: { ...UserResponseExampleDTO } },
           tags: { value: { ...PostResponseExampleDTO } },
         },

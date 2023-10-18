@@ -1,6 +1,6 @@
 export enum SearchType {
-  user = 'user',
-  tag = 'tag',
+  用戶 = 'user',
+  標籤 = 'tag',
   // popular = 'popular',
-  latest = 'latest',
+  // latest = 'latest',
 }
