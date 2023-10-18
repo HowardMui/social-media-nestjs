@@ -101,6 +101,8 @@ export class LikePostService {
             as: 'user',
           },
         ],
+        limit: limit ?? 20,
+        offset: offset ?? 0,
         order: [
           [
             { model: UserModel, as: 'likedPostByUser' },

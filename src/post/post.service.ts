@@ -48,7 +48,7 @@ export class PostService {
   // * Basic CRUD ------------------------------------------------------------------------------------
 
   async getAllPostLists(query: GetPostQueryParamsWithFilter) {
-    const { limit, offset, asc, desc, userName } = query;
+    const { limit, offset, asc, desc } = query;
     try {
       // * check if data is in cache:
       // const cachedData = await this.redis.getRedisValue<
@@ -73,6 +73,8 @@ export class PostService {
       //     ],
       const { count, rows } = await this.postModel.findAndCountAll({
         distinct: true,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
         order: orderByFilter(asc, desc) ?? [['postId', 'DESC']],
         attributes: {
           include: [

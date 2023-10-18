@@ -2,14 +2,10 @@ import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { errorHandler } from 'src/error-handler';
 import { RePostModel } from 'src/models/userPostAndRePost.mode';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
-import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class SharePostService {
   constructor(
-    private prisma: PrismaSrcService,
-    private redis: RedisService,
     @InjectModel(RePostModel)
     private rePostModel: typeof RePostModel,
   ) {}

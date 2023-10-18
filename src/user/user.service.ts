@@ -164,6 +164,8 @@ export class UserService {
         case GetUserPostEnum.Likes:
           const likePosts = await this.postModel.findAndCountAll({
             distinct: true,
+            limit: limit ?? 20,
+            offset: offset ?? 0,
             attributes: {
               include: [
                 [

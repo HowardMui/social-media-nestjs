@@ -11,9 +11,9 @@ import { QueryParamsWithFilter, TimeStamp } from 'src/types';
 import { UserResponse, UserResponseExampleDTO } from 'src/user/dto';
 
 export class GetPostQueryParamsWithFilter extends QueryParamsWithFilter {
-  @ApiProperty()
-  @IsOptional()
-  userName?: string;
+  // @ApiProperty()
+  // @IsOptional()
+  // userName?: string;
 }
 
 export class PostResponse extends TimeStamp {

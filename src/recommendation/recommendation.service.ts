@@ -380,8 +380,8 @@ export class RecommendationService {
 
       const response = {
         rows: user,
-        limit,
-        offset,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
       };
 
       // await this.redis.setRedisValue(
@@ -447,8 +447,8 @@ export class RecommendationService {
       const response = {
         count,
         rows,
-        limit,
-        offset,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
       };
 
       // await this.redis.setRedisValue(
