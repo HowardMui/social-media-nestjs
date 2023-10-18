@@ -24,11 +24,13 @@ import { InjectModel } from '@nestjs/sequelize';
 import {
   LikePostModel,
   PostModel,
+  PostModelType,
   PostTagModel,
   TagModel,
   UserModel,
 } from 'src/models';
 import { errorHandler } from 'src/error-handler';
+import { Op, WhereOptions } from 'sequelize';
 
 @Injectable()
 export class PostService {
@@ -48,7 +50,7 @@ export class PostService {
   // * Basic CRUD ------------------------------------------------------------------------------------
 
   async getAllPostLists(query: GetPostQueryParamsWithFilter) {
-    const { limit, offset, asc, desc } = query;
+    const { limit, offset, asc, desc, content, tagName } = query;
     try {
       // * check if data is in cache:
       // const cachedData = await this.redis.getRedisValue<
@@ -63,19 +65,28 @@ export class PostService {
       //   );
       // }
 
-      // ! Sequelize test format the tagName sql
+      const postContentCondition: {
+        content?: { [x: symbol]: string };
+      } = {};
 
-      //     [
-      //       Sequelize.literal(
-      //         `(SELECT JSON_ARRAY(JSON_EXTRACT(GROUP_CONCAT(JSON_OBJECT('tagName', Tag.tagName)), '$[*].tagName')) FROM tag AS Tag INNER JOIN post_tag AS pt ON Tag.tagId = pt.tagId WHERE pt.postId = PostModel.postId)`,
-      //       ),
-      //       'tagName',
-      //     ],
+      const tagNameCondition: {
+        tagName?: { [x: symbol]: string };
+      } = {};
+
+      if (content) {
+        postContentCondition.content = { [Op.substring]: content };
+      }
+
+      if (tagName) {
+        tagNameCondition.tagName = { [Op.substring]: tagName };
+      }
+
       const { count, rows } = await this.postModel.findAndCountAll({
         distinct: true,
         limit: limit ?? 20,
         offset: offset ?? 0,
         order: orderByFilter(asc, desc) ?? [['postId', 'DESC']],
+        where: postContentCondition,
         attributes: {
           include: [
             [
@@ -112,6 +123,7 @@ export class PostService {
         include: [
           {
             model: TagModel,
+            where: tagNameCondition,
             attributes: [],
           },
           {
@@ -134,7 +146,6 @@ export class PostService {
             as: 'user',
           },
         ],
-        // group: ['PostModel.postId', 'tags.tagId'],
       });
 
       return {
