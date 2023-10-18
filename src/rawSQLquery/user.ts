@@ -3,7 +3,7 @@ import {
   selectPostRawQuery,
   selectTagRawQuery,
   selectUserRawQuery,
-} from './common.rawQuery';
+} from './common';
 
 export const userPostAndRePostCount = (userId: number) => {
   return ` 

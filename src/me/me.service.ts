@@ -28,11 +28,9 @@ import { UserLogModel } from 'src/models/userLog.model';
 import {
   findMeFollowingPostAndRePost,
   findMeFollowingPostAndRePostCount,
-} from 'src/rawSQLquery';
-import {
   userPostAndRePost,
   userPostAndRePostCount,
-} from 'src/rawSQLquery/user.rawQuery';
+} from 'src/rawSQLquery';
 
 @Injectable()
 export class MeService {

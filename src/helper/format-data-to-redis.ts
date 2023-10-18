@@ -8,7 +8,7 @@ export const formatDataToRedis = <T>(
   params: FormatDataToRedisType<T>,
 ): string => {
   const { filter, keyword, userId } = params;
-  let queryString = `u:${userId}-${keyword}`;
+  let queryString = `u:${userId ?? 'guest'}-${keyword}`;
   if (!filter['limit']) {
     queryString += `-l:20`;
   }

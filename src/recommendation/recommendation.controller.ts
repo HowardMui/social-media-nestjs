@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   RecommendTagResponse,
@@ -10,6 +10,7 @@ import {
 } from './dto';
 import { RecommendationService } from './recommendation.service';
 import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
+import { Request } from 'express';
 
 @ApiTags('Recommendations')
 @Controller('recommendations')
@@ -63,13 +64,13 @@ export class RecommendationController {
   //           },
   //         ],
   //       },
-  //       // schema: {
-  //       //   anyOf: refs(
-  //       //     ListResponseWithoutCount<PostResponse>,
-  //       //     ListResponseWithoutCount<GetAllTagResponse>,
-  //       //     ListResponseWithoutCount<GetUserListResponse>,
-  //       //   ),
-  //       // },
+  // schema: {
+  //   anyOf: refs(
+  //     ListResponseWithoutCount<PostResponse>,
+  //     ListResponseWithoutCount<GetAllTagResponse>,
+  //     ListResponseWithoutCount<GetUserListResponse>,
+  //   ),
+  // },
   //       examples: {
   //         post: { value: { ...PostResponseExampleDTO } },
   //         users: { value: { ...UserResponseExampleDTO } },
@@ -86,22 +87,29 @@ export class RecommendationController {
 
   // * Allow guest to view
 
-  @Get('/posts')
-  @ApiOkResponsePaginated(RecommendationPostResponse, true)
-  @ApiOperation({
-    summary: 'Get recommended posts list data.',
-  })
-  getRecommendedPosts(@Query() query: RecommendationPostFilter) {
-    return this.recommendationService.getRecommendationPostList(query);
-  }
+  // * Get recommend posts
+  // @Get('/posts')
+  // @ApiOkResponsePaginated(RecommendationPostResponse, true)
+  // @ApiOperation({
+  //   summary: 'Get recommended posts list data.',
+  // })
+  // getRecommendedPosts(@Query() query: RecommendationPostFilter) {
+  //   return this.recommendationService.getRecommendationPostList(query);
+  // }
 
   @Get('/users')
   @ApiOperation({
     summary: 'Get recommended users list data.',
   })
   @ApiOkResponsePaginated(RecommendationUserResponse, true)
-  getRecommendedUsers(@Query() query: RecommendationUserFilter) {
-    return this.recommendationService.getRecommendationUserList(query);
+  getRecommendedUsers(
+    @Query() query: RecommendationUserFilter,
+    @Req() req: Request,
+  ) {
+    return this.recommendationService.getRecommendationUserList(
+      query,
+      req?.user ? req?.user['userId'] : undefined,
+    );
   }
 
   @Get('/tags')
@@ -109,7 +117,13 @@ export class RecommendationController {
     summary: 'Get recommended tags list data.',
   })
   @ApiOkResponsePaginated(RecommendTagResponse, true)
-  getRecommendedTags(@Query() query: RecommendationTagFilter) {
-    return this.recommendationService.getRecommendationTagList(query);
+  getRecommendedTags(
+    @Query() query: RecommendationTagFilter,
+    @Req() req: Request,
+  ) {
+    return this.recommendationService.getRecommendationTagList(
+      query,
+      req?.user ? req?.user['userId'] : undefined,
+    );
   }
 }

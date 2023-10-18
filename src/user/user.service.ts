@@ -16,11 +16,9 @@ import {
   UserModel,
 } from 'src/models';
 import { Sequelize } from 'sequelize-typescript';
-import {
-  userPostAndRePost,
-  userPostAndRePostCount,
-} from 'src/rawSQLquery/user.rawQuery';
+
 import { errorHandler } from 'src/error-handler';
+import { userPostAndRePost, userPostAndRePostCount } from 'src/rawSQLquery';
 
 @Injectable()
 export class UserService {
