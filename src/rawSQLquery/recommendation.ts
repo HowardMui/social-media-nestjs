@@ -5,7 +5,6 @@ export const recommendUserList = ({
   offset,
   userId,
 }: rawQueryParams) => {
-  console.log('userId', userId);
   return `
         select 
           u.*,

@@ -351,7 +351,7 @@ export class RecommendationService {
 
   async getRecommendationUserList(
     query: RecommendationUserFilter,
-    userId?: number,
+    userId: number,
   ) {
     try {
       const { limit, offset } = query;

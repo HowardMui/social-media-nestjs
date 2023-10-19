@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   RecommendTagResponse,
@@ -11,6 +11,9 @@ import {
 import { RecommendationService } from './recommendation.service';
 import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 import { Request } from 'express';
+import { AuthGuard } from '@nestjs/passport';
+import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
+import { Roles } from 'src/auth/role-guard/roles.decorator';
 
 @ApiTags('Recommendations')
 @Controller('recommendations')
@@ -99,9 +102,11 @@ export class RecommendationController {
 
   @Get('/users')
   @ApiOperation({
-    summary: 'Get recommended users list data.',
+    summary: 'Get recommended users list data. Login, user only',
   })
   @ApiOkResponsePaginated(RecommendationUserResponse, true)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
   getRecommendedUsers(
     @Query() query: RecommendationUserFilter,
     @Req() req: Request,
