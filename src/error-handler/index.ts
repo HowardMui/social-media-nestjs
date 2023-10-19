@@ -13,5 +13,7 @@ export const errorHandler = (err: Error | any) => {
       return new NotFoundException(`${err.table.slice(0, -1)} does not exist`);
     case 'SequelizeValidationError':
       return new BadRequestException(err.errors[0].message);
+    default:
+      return new BadRequestException(err);
   }
 };

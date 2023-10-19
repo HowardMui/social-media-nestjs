@@ -61,14 +61,14 @@ export class UserModel extends Model<UserModelType> {
   })
   email: string;
 
-  @Index({ unique: true, name: 'userName_Unique' })
+  @Index({ unique: true, name: 'userName_Unique', type: 'FULLTEXT' })
   @Unique({ name: 'email', msg: 'UserName already exist' })
   @Length({
     max: 20,
     min: 4,
     msg: 'Minimum 4 chars and maximum 20 chars in userName',
   })
-  @Column
+  @Column(DataType.TEXT)
   userName: string;
 
   @Column

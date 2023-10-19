@@ -20,7 +20,7 @@ export interface UserAuthModelType {
   email: string;
   hash: string;
   provider?: string;
-  userId?: string;
+  userId?: number;
 }
 
 type UserAuthModelOptionalType = Optional<UserAuthModelType, 'userAuthId'>;
