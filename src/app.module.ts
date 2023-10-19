@@ -19,6 +19,9 @@ import { LikePostModule } from './like-post/like-post.module';
 import { SharePostModule } from './share-post/share-post.module';
 import { FollowUserActionModule } from './follow-user-action/follow-user-action.module';
 import { SequelizeSrcModule } from './sequelize-src/sequelize-src.module';
+import { JwtStrategy } from './auth/strategy';
+import { SequelizeModule } from '@nestjs/sequelize';
+import { AdminModel, UserModel } from './models';
 
 @Module({
   imports: [
@@ -40,8 +43,9 @@ import { SequelizeSrcModule } from './sequelize-src/sequelize-src.module';
     SharePostModule,
     FollowUserActionModule,
     SequelizeSrcModule,
+    SequelizeModule.forFeature([UserModel, AdminModel]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, JwtStrategy],
 })
 export class AppModule {}
