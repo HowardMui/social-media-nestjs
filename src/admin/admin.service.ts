@@ -6,6 +6,10 @@ import { Request, Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { AdminSignInDTO, AdminSignUpDTO } from './dto';
 import { formatDevice } from 'src/helper';
+import { InjectModel } from '@nestjs/sequelize';
+import { AdminAuthModel, AdminModel, UserLogModel } from 'src/models';
+import { errorHandler } from 'src/error-handler';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class AdminService {
@@ -13,42 +17,39 @@ export class AdminService {
     private prisma: PrismaSrcService,
     private jwt: JwtService,
     private config: ConfigService,
+    @InjectModel(AdminModel)
+    private adminModel: typeof AdminModel,
+    @InjectModel(UserLogModel)
+    private userLogModel: typeof UserLogModel,
+    private sequelize: Sequelize,
   ) {}
 
   async adminSignup(dto: AdminSignUpDTO) {
-    const { displayName, loginName, email, password } = dto;
+    const { displayName, email, password } = dto;
     try {
-      // Generate hash password
+      // * Generate hash password
       const hash = await argon.hash(password);
 
-      // Create new User
-      const newAdmin = await this.prisma.admin.create({
-        data: {
-          displayName,
-          loginName,
-          email,
-          AdminAuth: {
-            create: {
-              loginName,
-              hash,
-              email,
-            },
-          },
-        },
-        include: {
-          AdminAuth: true,
-        },
-      });
+      // * Create new admin
 
-      return newAdmin;
+      return await this.adminModel.create(
+        {
+          email,
+          displayName,
+          AdminAuth: [
+            {
+              authEmail: email,
+              hash,
+            },
+          ],
+        },
+        {
+          include: [AdminAuthModel],
+        },
+      );
     } catch (err) {
       console.log(err);
-
-      if (err.code === 'P2002') {
-        throw new ForbiddenException('Email already exist');
-      }
-
-      throw err;
+      return errorHandler(err);
     }
   }
 
@@ -61,48 +62,50 @@ export class AdminService {
     const { email, password } = dto;
     const { client, device, os } = formatDevice(req);
     try {
-      await this.prisma.$transaction(async (tx) => {
+      await this.sequelize.transaction(async (t) => {
+        const transactionHost = { transaction: t };
+
         // * 1. Find admin
-        const findAdmin = await tx.admin.findUnique({
-          where: { email },
-          include: { AdminAuth: true },
+        const admin = await this.adminModel.findOne({
+          where: {
+            email,
+          },
+          include: [AdminAuthModel],
         });
 
-        if (!findAdmin) {
-          throw new ForbiddenException('Cannot find Admin');
+        if (!admin) {
+          throw new ForbiddenException('Cannot find admin');
+        } else if (!admin.AdminAuth.length) {
+          throw new ForbiddenException(
+            'Invalid admin.  Please find super Admin',
+          );
         }
 
         // * 2. Compare hash password
-        if (findAdmin.AdminAuth.length > 0) {
-          const passwordMatch = await argon.verify(
-            findAdmin.AdminAuth[0].hash,
-            password,
-          );
-          if (!passwordMatch) {
-            throw new ForbiddenException('Error in email or password');
-          }
-        } else {
-          throw new ForbiddenException(
-            'Some issue with this account.  Please contact Admin.',
-          );
+        const passwordMatch = await argon.verify(
+          admin.AdminAuth[0].hash,
+          password,
+        );
+        if (!passwordMatch) {
+          throw new ForbiddenException('Error in email or password');
         }
 
         // * 3. Add record to log table
-        await tx.logTable.create({
-          data: {
-            adminId: findAdmin.adminId,
+        await this.userLogModel.create(
+          {
+            adminId: admin.adminId,
             userType: 'admin',
             ipAddress: signInIpAddress,
             device: `${device.type}-${device.brand}-${os.name}-${os.version}-${client.type}-${client.name}-${client.version}`,
           },
-        });
+          transactionHost,
+        );
 
         res
           .status(200)
           .cookie(
             'token',
-            (await this.signAdminToken(findAdmin.adminId, findAdmin.email))
-              .access_token,
+            (await this.signAdminToken(admin.adminId, email)).access_token,
             {
               httpOnly: true,
               sameSite: 'none',
@@ -114,10 +117,10 @@ export class AdminService {
       return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
-      if (err.code === 'P2002') {
-        return new ForbiddenException('Email already exist');
+      if (err.response) {
+        return err.response;
       }
-      return err;
+      return errorHandler(err);
     }
   }
 
