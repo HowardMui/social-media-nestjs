@@ -3,6 +3,7 @@ import { GetOneUserResponse, GetUserListQueryParams } from './dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import {
   formatListResponseObject,
+  orderByFilter,
   returnAscOrDescInQueryParamsWithFilter,
 } from 'src/helper';
 import { GetUserPostEnum, GetUserPostQuery } from './dto/user-post.dto';
@@ -19,6 +20,7 @@ import { Sequelize } from 'sequelize-typescript';
 
 import { errorHandler } from 'src/error-handler';
 import { userPostAndRePost, userPostAndRePostCount } from 'src/rawSQLquery';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class UserService {
@@ -36,8 +38,21 @@ export class UserService {
   async getUserList(query: GetUserListQueryParams) {
     const { limit, offset, userName, asc, desc } = query;
 
+    const userNameCondition: {
+      userName?: { [x: symbol]: string };
+    } = {};
+
+    if (userName) {
+      userNameCondition.userName = { [Op.substring]: userName };
+    }
+
     try {
       const { count, rows } = await this.userModel.findAndCountAll({
+        distinct: true,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
+        where: userNameCondition,
+        order: orderByFilter(asc, desc) ?? [['userId', 'DESC']],
         attributes: {
           include: [
             [
