@@ -37,7 +37,8 @@ export const findMeFollowingPostAndRePost = ({
   return `
   select * from (
     select ${selectPostRawQuery} ,${selectUserRawQuery}, ${selectTagRawQuery},
-    count(lp.postId) as 'likedCount', count(bp.postId) as 'bookmarkedCount', count(rp.postId) as 'rePostedCount',
+    count(lp.postId) as 'likedCount', count(bp.postId) as 'bookmarkedCount', 
+    count(rp.postId) as 'rePostedCount', count(cm.postId) as 'commentCount',
     null as rePostUser, p.createdAt
     from post as p 
     inner join user AS u ON p.userId = u.userId
@@ -45,6 +46,7 @@ export const findMeFollowingPostAndRePost = ({
     left join user_rePost as rp on rp.postId = p.postId
     left join user_likePost as lp on lp.postId = p.postId
     left join user_bookmarkPost as bp on bp.postId = p.postId
+    left join comment as cm on cm.postId = p.postId and cm.parentCommentId is null
 
     where p.userId in (
         select uf.followingId from user_follows as uf
@@ -53,7 +55,8 @@ export const findMeFollowingPostAndRePost = ({
     group by p.postId
     union
     select ${selectPostRawQuery}, ${selectUserRawQuery}, ${selectTagRawQuery},
-    count(lp.postId) as 'likedCount', count(bp.postId) as 'bookmarkedCount', count(rp.postId) as 'rePostedCount',
+    count(lp.postId) as 'likedCount', count(bp.postId) as 'bookmarkedCount', 
+    count(rp.postId) as 'rePostedCount', count(cm.postId) as 'commentCount',
     MIN(JSON_OBJECT('userId', rp_u.userId, 'userName', rp_u.userName)) as rePostUser, MIN(rp.createdAt) as createdAt
     from post as p 
     inner join user AS u ON p.userId = u.userId
@@ -63,6 +66,7 @@ export const findMeFollowingPostAndRePost = ({
     
     left join user_likePost as lp on lp.postId = p.postId
     left join user_bookmarkPost as bp on bp.postId = p.postId
+    left join comment as cm on cm.postId = p.postId and cm.parentCommentId is null
     where rp.userId in (
         select uf.followingId from user_follows as uf
         where uf.followerId = ${userId}

@@ -22,7 +22,7 @@ import { formatDataToRedis } from 'src/helper/format-data-to-redis';
 import { Sequelize } from 'sequelize-typescript';
 import { InjectModel } from '@nestjs/sequelize';
 import {
-  LikePostModel,
+  CommentModel,
   PostModel,
   PostModelType,
   PostTagModel,
@@ -108,6 +108,12 @@ export class PostService {
             ],
             [
               Sequelize.literal(
+                `(SELECT COUNT(*) FROM comment AS cm WHERE cm.postId = PostModel.postId AND cm.parentCommentId IS NULL)`,
+              ),
+              'commentCount',
+            ],
+            [
+              Sequelize.literal(
                 `(COALESCE(
                   (SELECT 
                   JSON_ARRAYAGG(t.tagName)
@@ -141,6 +147,10 @@ export class PostService {
             attributes: [],
           },
           {
+            model: CommentModel,
+            attributes: [],
+          },
+          {
             model: UserModel,
             as: 'user',
           },
@@ -153,20 +163,6 @@ export class PostService {
         limit: limit ?? 0,
         offset: offset ?? 20,
       };
-
-      // return {
-      //   count,
-      //   rows: rows.map((el) => {
-      //     const { tags, ...rest } = el.toJSON();
-      //     return {
-      //       ...rest,
-      //       tags: tags.map((tag) => tag.tagName),
-      //     };
-      //   }),
-      //   // rows,
-      //   limit: limit ?? 0,
-      //   offset: offset ?? 20,
-      // };
     } catch (err) {
       console.log(err);
       if (err.message.includes('Unknown arg')) {
@@ -204,6 +200,12 @@ export class PostService {
             ],
             [
               Sequelize.literal(
+                `(SELECT COUNT(*) FROM comment AS cm WHERE cm.postId = PostModel.postId AND cm.parentCommentId IS NULL)`,
+              ),
+              'commentCount',
+            ],
+            [
+              Sequelize.literal(
                 `(COALESCE(
                   (SELECT 
                   JSON_ARRAYAGG(t.tagName)
@@ -233,6 +235,10 @@ export class PostService {
           {
             model: UserModel,
             as: 'rePostedByUser',
+            attributes: [],
+          },
+          {
+            model: CommentModel,
             attributes: [],
           },
           {
