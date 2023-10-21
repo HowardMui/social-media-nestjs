@@ -35,7 +35,6 @@ import { Op, WhereOptions } from 'sequelize';
 @Injectable()
 export class PostService {
   constructor(
-    private prisma: PrismaSrcService,
     private redis: RedisService,
     @InjectModel(PostModel)
     private postModel: typeof PostModel,

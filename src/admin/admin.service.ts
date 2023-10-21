@@ -1,6 +1,5 @@
 import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
 import * as argon from 'argon2';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
@@ -14,7 +13,6 @@ import { Sequelize } from 'sequelize-typescript';
 @Injectable()
 export class AdminService {
   constructor(
-    private prisma: PrismaSrcService,
     private jwt: JwtService,
     private config: ConfigService,
     @InjectModel(AdminModel)

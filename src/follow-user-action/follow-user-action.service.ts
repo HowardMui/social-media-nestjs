@@ -4,7 +4,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { RedisService } from 'src/redis/redis.service';
 import {
   GetMeFollowersQueryParams,
@@ -21,7 +20,6 @@ import { formatDataToRedis } from 'src/helper';
 @Injectable()
 export class FollowUserActionService {
   constructor(
-    private prisma: PrismaSrcService,
     private redis: RedisService,
     @InjectModel(UserFollowModel)
     private userFollowModel: typeof UserFollowModel,
@@ -120,8 +118,8 @@ export class FollowUserActionService {
             [
               Sequelize.literal(`CASE WHEN (
                 SELECT COUNT(*)
-                FROM userFollows AS uf1
-                INNER JOIN userFollows AS uf2 ON uf1.followerId = uf2.followingId
+                FROM user_follows AS uf1
+                INNER JOIN user_follows AS uf2 ON uf1.followerId = uf2.followingId
                 WHERE uf1.followingId = UserModel.userId AND uf2.followerId = UserModel.userId
               ) > 0 THEN "TRUE" ELSE "FALSE" END`),
               'isFollowing',
@@ -179,8 +177,8 @@ export class FollowUserActionService {
               [
                 Sequelize.literal(`CASE WHEN (
                 SELECT COUNT(*)
-                FROM userFollows AS uf1
-                INNER JOIN userFollows AS uf2 ON uf1.followingId = uf2.followerId
+                FROM user_follows AS uf1
+                INNER JOIN user_follows AS uf2 ON uf1.followingId = uf2.followerId
                 WHERE uf1.followerId = UserModel.userId AND uf2.followingId = UserModel.userId
               ) > 0 THEN "TRUE" ELSE "FALSE" END`),
                 'isFollowing',

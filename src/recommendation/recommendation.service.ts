@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   RecommendationPostFilter,
   RecommendationTagFilter,
@@ -19,7 +18,6 @@ import { recommendUserList } from 'src/rawSQLquery';
 @Injectable()
 export class RecommendationService {
   constructor(
-    private prisma: PrismaSrcService,
     private redis: RedisService,
     @InjectModel(UserModel)
     private userModel: typeof UserModel,

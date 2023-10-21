@@ -1,5 +1,4 @@
 import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   GetMeLikedQueryParams,
   GetMePostQueryParams,
@@ -35,7 +34,6 @@ import {
 @Injectable()
 export class MeService {
   constructor(
-    private prisma: PrismaSrcService,
     private jwt: JwtService,
     private config: ConfigService,
     private redis: RedisService,
@@ -187,13 +185,13 @@ export class MeService {
           include: [
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM userFollows AS uf WHERE uf.followerId = UserModel.userId)`,
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followerId = UserModel.userId)`,
               ),
               'followingCount',
             ],
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM userFollows AS uf WHERE uf.followingId = UserModel.userId)`,
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followingId = UserModel.userId)`,
               ),
               'followerCount',
             ],
@@ -327,64 +325,61 @@ export class MeService {
       // if (cachedMeCommentList) {
       //   return cachedMeCommentList;
       // } else {
-      const [postCount, postListWithComment] = await this.prisma.$transaction([
-        this.prisma.post.count({
-          where: {
-            comments: {
-              some: {
-                userId,
-              },
-            },
-          },
-        }),
-        this.prisma.post.findMany({
-          where: {
-            comments: {
-              some: {
-                userId,
-              },
-            },
-          },
-          include: {
-            user: true,
-            tags: true,
-            comments: {
-              where: {
-                userId,
-              },
-              include: {
-                parentComment: {
-                  include: {
-                    user: true,
-                  },
-                },
-              },
-            },
-            _count: {
-              select: {
-                likedByUser: true,
-                comments: true,
-                bookmarkedByUser: true,
-                rePostOrderByUser: true,
-              },
-            },
-          },
-        }),
-      ]);
-
-      const response = formatListResponseObject({
-        count: postCount,
-        rows: postListWithComment.map((post) => formatResponseListData(post)),
-        limit,
-        offset,
-      });
-
+      // const [postCount, postListWithComment] = await this.prisma.$transaction([
+      //   this.prisma.post.count({
+      //     where: {
+      //       comments: {
+      //         some: {
+      //           userId,
+      //         },
+      //       },
+      //     },
+      //   }),
+      //   this.prisma.post.findMany({
+      //     where: {
+      //       comments: {
+      //         some: {
+      //           userId,
+      //         },
+      //       },
+      //     },
+      //     include: {
+      //       user: true,
+      //       tags: true,
+      //       comments: {
+      //         where: {
+      //           userId,
+      //         },
+      //         include: {
+      //           parentComment: {
+      //             include: {
+      //               user: true,
+      //             },
+      //           },
+      //         },
+      //       },
+      //       _count: {
+      //         select: {
+      //           likedByUser: true,
+      //           comments: true,
+      //           bookmarkedByUser: true,
+      //           rePostOrderByUser: true,
+      //         },
+      //       },
+      //     },
+      //   }),
+      // ]);
+      // const response = formatListResponseObject({
+      //   count: postCount,
+      //   rows: postListWithComment.map((post) => formatResponseListData(post)),
+      //   limit,
+      //   offset,
+      // });
       // await this.redis.setRedisValue(
       //   `gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`,
       //   response,
       // );
-
-      return response;
+      // return response;
       // }
     } catch (err) {
       console.log(err);

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import { GetSearchQueryParamsWithFilter } from './dto/search.dto';
 import { SearchType } from 'src/types';
 import { InjectModel } from '@nestjs/sequelize';
@@ -9,7 +8,6 @@ import { Op } from 'sequelize';
 @Injectable()
 export class SearchService {
   constructor(
-    private prisma: PrismaSrcService,
     @InjectModel(UserModel)
     private userModel: typeof UserModel,
     @InjectModel(TagModel)
