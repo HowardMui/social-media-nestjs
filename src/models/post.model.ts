@@ -19,6 +19,7 @@ import { LikePostModel } from './likePost.model';
 import { BookmarkPostModel } from './bookmarkPost.model';
 import { TagModel } from './tag.model';
 import { PostTagModel } from './postTag.model';
+import { CommentModel } from './comment.model';
 
 export interface PostModelType extends TimeStamp {
   postId: number;
@@ -29,7 +30,7 @@ export interface PostModelType extends TimeStamp {
   tags: TagModel[];
 }
 
-@Table({ tableName: 'posts' })
+@Table({ tableName: 'post' })
 export class PostModel extends Model<PostModelType> {
   @AutoIncrement
   @Unique
@@ -81,6 +82,9 @@ export class PostModel extends Model<PostModelType> {
 
   @BelongsToMany(() => TagModel, () => PostTagModel)
   postTags: TagModel[];
+
+  @HasMany(() => CommentModel)
+  userComments: CommentModel[];
 
   @CreatedAt
   createdAt: Date;

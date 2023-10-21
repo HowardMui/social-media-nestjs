@@ -15,7 +15,7 @@ export interface UserFollowModelType extends TimeStamp {
   followingId: number;
 }
 
-@Table({ tableName: 'userFollows' })
+@Table({ tableName: 'user_follows' })
 export class UserFollowModel extends Model<UserFollowModelType> {
   @ForeignKey(() => UserModel)
   @Column

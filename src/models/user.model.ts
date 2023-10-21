@@ -2,10 +2,7 @@ import {
   AutoIncrement,
   BelongsToMany,
   Column,
-  CreatedAt,
   DataType,
-  DeletedAt,
-  ForeignKey,
   HasMany,
   Index,
   IsEmail,
@@ -13,17 +10,16 @@ import {
   Model,
   Table,
   Unique,
-  UpdatedAt,
 } from 'sequelize-typescript';
 import { UserAuthModel, UserAuthModelType } from './userAuth.model';
-import { TimeStamp } from 'src/types';
 import { UserFollowModel } from './userFollow.model';
 import { PostModel } from './post.model';
 import { RePostModel } from './userPostAndRePost.mode';
 import { LikePostModel } from './likePost.model';
 import { BookmarkPostModel } from './bookmarkPost.model';
+import { CommentModel } from './comment.model';
 
-export interface UserModelType extends TimeStamp {
+export interface UserModelType {
   userId?: number;
   firstName: string;
   lastName: string;
@@ -35,7 +31,7 @@ export interface UserModelType extends TimeStamp {
   UserAuths: UserAuthModelType[];
 }
 
-@Table({ tableName: 'users' })
+@Table({ tableName: 'user' })
 export class UserModel extends Model<UserModelType> {
   @AutoIncrement
   @Unique
@@ -43,14 +39,14 @@ export class UserModel extends Model<UserModelType> {
     primaryKey: true,
     unique: true,
     autoIncrement: true,
-    allowNull: true,
+    allowNull: false,
   })
   userId: number;
 
-  @Column
+  @Column(DataType.TEXT)
   firstName: string;
 
-  @Column
+  @Column(DataType.TEXT)
   lastName: string;
 
   @IsEmail
@@ -58,26 +54,30 @@ export class UserModel extends Model<UserModelType> {
   @Unique({ name: 'email', msg: 'Email already exist' })
   @Column({
     type: DataType.STRING,
+    allowNull: false,
   })
   email: string;
 
-  @Index({ unique: true, name: 'userName_Unique', type: 'FULLTEXT' })
-  @Unique({ name: 'email', msg: 'UserName already exist' })
   @Length({
     max: 20,
     min: 4,
     msg: 'Minimum 4 chars and maximum 20 chars in userName',
   })
-  @Column(DataType.TEXT)
+  @Index({ unique: true, name: 'userName_unique' })
+  @Unique({ name: 'userName', msg: 'UserName already exist' })
+  @Column({
+    type: DataType.STRING(20),
+    allowNull: false,
+  })
   userName: string;
 
-  @Column
+  @Column(DataType.TEXT)
   image: string;
 
-  @Column
+  @Column(DataType.TEXT)
   bio: string;
 
-  @Column
+  @Column(DataType.TEXT)
   description: string;
 
   @HasMany(() => UserAuthModel)
@@ -99,9 +99,6 @@ export class UserModel extends Model<UserModelType> {
 
   @HasMany(() => PostModel)
   posts: PostModel[];
-
-  // @HasMany(() => RePostModel)
-  // rePost: RePostModel[];
 
   @BelongsToMany(() => PostModel, {
     through: () => RePostModel,
@@ -127,12 +124,6 @@ export class UserModel extends Model<UserModelType> {
   })
   bookmarkedPosts: PostModel[];
 
-  @CreatedAt
-  createdAt: Date;
-
-  @UpdatedAt
-  updatedAt: Date;
-
-  @DeletedAt
-  deletedAt: Date;
+  @HasMany(() => CommentModel)
+  comments: CommentModel[];
 }
