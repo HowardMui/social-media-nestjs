@@ -5,7 +5,6 @@ import {
   GetMeBookmarkedQueryParams,
   UserSignInDTO,
   UserSignUpDTO,
-  GetMeCommentQueryParams,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
@@ -251,37 +250,7 @@ export class MeService {
       //   return cachedAllMePostData;
       // } else {
 
-      // ! Sequelize
-      // const myPost = await this.postModel.findAndCountAll({
-      //   where: {
-      //     [Op.or]: [
-      //       {
-      //         userId,
-      //       },
       //       { '$rePostedByUser.userId$': userId }, // Find posts re-posted by the current user
-      //     ],
-      //   },
-      //   include: [
-      //     {
-      //       model: UserModel,
-      //       as: 'rePostedByUser',
-      //       // attributes: [],
-      //     },
-      //     {
-      //       model: UserModel,
-      //       as: 'user',
-      //     },
-      //   ],
-      //   order: [
-      //     [
-      //       { model: UserModel, as: 'rePostedByUser' },
-      //       RePostModel,
-      //       'createdAt',
-      //       'desc',
-      //     ],
-      //     ['createdAt', 'desc'],
-      //   ],
-      // });
 
       // await this.redis.setRedisValue(
       //   `gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`,
@@ -308,78 +277,6 @@ export class MeService {
         offset: offset ?? 0,
       };
 
-      // }
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  async getAllMeComment(query: GetMeCommentQueryParams, userId: number) {
-    const { limit, offset } = query;
-
-    try {
-      // * gmcl = get my comment list
-      // const cachedMeCommentList = await this.redis.getRedisValue<
-      //   ListResponse<GetMeCommentResponse>
-      // >(`gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`);
-      // if (cachedMeCommentList) {
-      //   return cachedMeCommentList;
-      // } else {
-      // const [postCount, postListWithComment] = await this.prisma.$transaction([
-      //   this.prisma.post.count({
-      //     where: {
-      //       comments: {
-      //         some: {
-      //           userId,
-      //         },
-      //       },
-      //     },
-      //   }),
-      //   this.prisma.post.findMany({
-      //     where: {
-      //       comments: {
-      //         some: {
-      //           userId,
-      //         },
-      //       },
-      //     },
-      //     include: {
-      //       user: true,
-      //       tags: true,
-      //       comments: {
-      //         where: {
-      //           userId,
-      //         },
-      //         include: {
-      //           parentComment: {
-      //             include: {
-      //               user: true,
-      //             },
-      //           },
-      //         },
-      //       },
-      //       _count: {
-      //         select: {
-      //           likedByUser: true,
-      //           comments: true,
-      //           bookmarkedByUser: true,
-      //           rePostOrderByUser: true,
-      //         },
-      //       },
-      //     },
-      //   }),
-      // ]);
-      // const response = formatListResponseObject({
-      //   count: postCount,
-      //   rows: postListWithComment.map((post) => formatResponseListData(post)),
-      //   limit,
-      //   offset,
-      // });
-      // await this.redis.setRedisValue(
-      //   `gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`,
-      //   response,
-      // );
-      // return response;
       // }
     } catch (err) {
       console.log(err);

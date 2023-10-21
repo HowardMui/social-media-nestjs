@@ -1,18 +1,29 @@
 import {
   AutoIncrement,
   BelongsTo,
-  BelongsToMany,
   Column,
   DataType,
   ForeignKey,
+  HasMany,
   Length,
   Model,
   Table,
   Unique,
 } from 'sequelize-typescript';
 import { TimeStamp } from 'src/types';
+import { UserModel, UserModelType } from './user.model';
+import { PostModel } from './post.model';
 
-export interface CommentModelType extends TimeStamp {}
+export interface CommentModelType extends TimeStamp {
+  commentId: number;
+  message: string;
+  user: UserModelType;
+  userId: number;
+  post: PostModel;
+  postId: number;
+  parentCommentId: number | null;
+  parentComment: CommentModelType;
+}
 
 @Table({ tableName: 'comment' })
 export class CommentModel extends Model<CommentModelType> {
@@ -27,18 +38,30 @@ export class CommentModel extends Model<CommentModelType> {
   })
   commentId: number;
 
-  //   @Length({
-  //     max: 25,
-  //     min: 2,
-  //     msg: 'Minimum 2 chars and maximum 25 chars in tagName',
-  //   })
-  //   @Column(DataType.TEXT)
-  //   tagName: string;
+  @Column(DataType.TEXT)
+  message: string;
 
-  // @ForeignKey(() => PostModel)
-  // @Column(DataType.INTEGER)
-  // postId: number;
+  @ForeignKey(() => UserModel)
+  @Column(DataType.INTEGER)
+  userId: number;
 
-  // @BelongsToMany(() => PostModel, () => PostTagModel)
-  // post: PostModel[];
+  @BelongsTo(() => UserModel)
+  user: UserModel;
+
+  @ForeignKey(() => PostModel)
+  @Column(DataType.INTEGER)
+  postId: number;
+
+  @BelongsTo(() => PostModel)
+  post: PostModel;
+
+  @ForeignKey(() => CommentModel)
+  @Column(DataType.INTEGER)
+  parentCommentId: number;
+
+  @BelongsTo(() => CommentModel, { foreignKey: 'parentCommentId' })
+  parentComment: CommentModel;
+
+  @HasMany(() => CommentModel, 'parentCommentId')
+  comments: CommentModel[];
 }

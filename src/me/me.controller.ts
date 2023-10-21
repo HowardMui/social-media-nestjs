@@ -29,8 +29,6 @@ import {
   GetMeBookmarkedQueryParams,
   UserSignInDTO,
   UserSignUpDTO,
-  GetMeCommentQueryParams,
-  GetMeCommentResponse,
 } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
@@ -97,18 +95,6 @@ export class MeController {
   @Roles(Role.User)
   getAllMePost(@Query() query: GetMePostQueryParams, @Req() req: Request) {
     return this.userProfileService.getAllMePost(query, req.user['userId']);
-  }
-
-  @Get('comments')
-  @ApiOkResponsePaginated(GetMeCommentResponse)
-  @ApiOperation({ summary: 'List all user comments. App User Only' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  getAllMeCommentInPost(
-    @Query() query: GetMeCommentQueryParams,
-    @Req() req: Request,
-  ) {
-    return this.userProfileService.getAllMeComment(query, req.user['userId']);
   }
 
   @Get('posts/following')

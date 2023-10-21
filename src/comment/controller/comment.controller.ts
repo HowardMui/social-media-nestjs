@@ -11,12 +11,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CommentService } from './comment.service';
+import { CommentService } from '../services/comment.service';
 import {
   CreateCommentDTO,
   GetAllPostCommentParams,
   GetCommentInOnePostResponse,
-} from './dto';
+} from '../dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { Roles } from 'src/auth/role-guard/roles.decorator';

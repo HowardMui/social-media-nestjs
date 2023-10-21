@@ -16,4 +16,7 @@ export enum RedisKey {
 
   // * gru = get recommend users
   推薦用戶 = 'gru',
+
+  // * gmcl = get my comment list
+  我的回覆 = 'gmcl',
 }
