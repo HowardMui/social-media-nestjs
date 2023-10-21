@@ -19,7 +19,7 @@ export const getOneTagName = ({
             from (
                 select pt.postId, p.content, p.image, p.userId from
                 post_tag AS pt
-                inner join posts AS p ON p.postId = pt.postId
+                inner join post AS p ON p.postId = pt.postId
                 where pt.tagId = t.tagId
                 limit ${limit ?? 20}
                 offset ${offset ?? 0}

@@ -1,14 +1,14 @@
 export const selectUserRawQuery = `
-    u.userId as "users.userId",
-    u.firstName as "users.firstName",
-    u.lastName as "users.lastName",
-    u.email as "users.email",
-    u.userName as "users.userName",
-    u.image as "users.image",
-    u.bio as "users.bio",
-    u.description as "users.description",
-    u.createdAt as "users.createdAt",
-    u.updatedAt as "users.updatedAt"
+    u.userId as "user.userId",
+    u.firstName as "user.firstName",
+    u.lastName as "user.lastName",
+    u.email as "user.email",
+    u.userName as "user.userName",
+    u.image as "user.image",
+    u.bio as "user.bio",
+    u.description as "user.description",
+    u.createdAt as "user.createdAt",
+    u.updatedAt as "user.updatedAt"
 `;
 
 export const selectPostRawQuery = `

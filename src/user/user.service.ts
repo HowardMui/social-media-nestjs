@@ -57,13 +57,13 @@ export class UserService {
           include: [
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM userFollows AS uf WHERE uf.followerId = UserModel.userId)`,
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followerId = UserModel.userId)`,
               ),
               'followingCount',
             ],
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM userFollows AS uf WHERE uf.followingId = UserModel.userId)`,
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followingId = UserModel.userId)`,
               ),
               'followerCount',
             ],
@@ -107,13 +107,13 @@ export class UserService {
           include: [
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM userFollows AS uf WHERE uf.followerId = UserModel.userId)`,
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followerId = UserModel.userId)`,
               ),
               'followingCount',
             ],
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM userFollows AS uf WHERE uf.followingId = UserModel.userId)`,
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followingId = UserModel.userId)`,
               ),
               'followerCount',
             ],

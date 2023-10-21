@@ -9,18 +9,18 @@ export const findMeFollowingPostAndRePostCount = (userId: number) => {
   return `
   select count(*) as count from (
     select ${selectPostRawQuery}, p.createdAt
-    from posts as p 
+    from post as p 
     where p.userId in (
-        select uf.followingId from userFollows as uf
+        select uf.followingId from user_follows as uf
         where uf.followerId = ${userId}
     )
     group by p.postId
     union
     select ${selectPostRawQuery}, rp.createdAt
-    from posts as p 
+    from post as p 
     inner join user_rePost as rp on rp.postId = p.postId
     where rp.userId in (
-        select uf.followingId from userFollows as uf
+        select uf.followingId from user_follows as uf
         where uf.followerId = ${userId}
     )
     group by p.postId, rp.createdAt
@@ -39,15 +39,15 @@ export const findMeFollowingPostAndRePost = ({
     select ${selectPostRawQuery} ,${selectUserRawQuery}, ${selectTagRawQuery},
     count(lp.postId) as 'likedCount', count(bp.postId) as 'bookmarkedCount', count(rp.postId) as 'rePostedCount',
     null as rePostUser, p.createdAt
-    from posts as p 
-    inner join users AS u ON p.userId = u.userId
+    from post as p 
+    inner join user AS u ON p.userId = u.userId
 
     left join user_rePost as rp on rp.postId = p.postId
     left join user_likePost as lp on lp.postId = p.postId
     left join user_bookmarkPost as bp on bp.postId = p.postId
 
     where p.userId in (
-        select uf.followingId from userFollows as uf
+        select uf.followingId from user_follows as uf
         where uf.followerId = ${userId}
     )
     group by p.postId
@@ -55,16 +55,16 @@ export const findMeFollowingPostAndRePost = ({
     select ${selectPostRawQuery}, ${selectUserRawQuery}, ${selectTagRawQuery},
     count(lp.postId) as 'likedCount', count(bp.postId) as 'bookmarkedCount', count(rp.postId) as 'rePostedCount',
     MIN(JSON_OBJECT('userId', rp_u.userId, 'userName', rp_u.userName)) as rePostUser, MIN(rp.createdAt) as createdAt
-    from posts as p 
-    inner join users AS u ON p.userId = u.userId
+    from post as p 
+    inner join user AS u ON p.userId = u.userId
 
     inner join user_rePost as rp on rp.postId = p.postId
-    left join users AS rp_u ON rp.userId = rp_u.userId
+    left join user AS rp_u ON rp.userId = rp_u.userId
     
     left join user_likePost as lp on lp.postId = p.postId
     left join user_bookmarkPost as bp on bp.postId = p.postId
     where rp.userId in (
-        select uf.followingId from userFollows as uf
+        select uf.followingId from user_follows as uf
         where uf.followerId = ${userId}
     )
     group by p.postId
@@ -79,10 +79,10 @@ export const findMeFollowingPostAndRePost = ({
 export const testCase = () => {
   return `
     select p.postId, p.content, rp.createdAt
-    from posts as p 
+    from post as p 
     inner join user_rePost as rp on rp.postId = p.postId
     where rp.userId in (
-        select uf.followingId from userFollows as uf
+        select uf.followingId from user_follows as uf
         where uf.followerId = 1
     )
   `;
