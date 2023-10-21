@@ -26,7 +26,7 @@ services:
     cap_add:
       - SYS_NICE
     environment:
-      - MYSQL_DATABASE=social_media_app_db
+      - MYSQL_DATABASE=social_media_db
       - MYSQL_USER=howard
       - MYSQL_PASSWORD=howard
       - MYSQL_ROOT_PASSWORD=howard

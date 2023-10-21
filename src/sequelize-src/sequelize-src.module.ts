@@ -32,7 +32,6 @@ import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
           database: config.get('MYSQL_DATABASE'),
           autoLoadModels: true,
           synchronize: true,
-          retryAttempts: 10000,
           models: [
             UserModel,
             UserAuthModel,
