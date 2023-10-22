@@ -34,6 +34,16 @@ export class MeCommentService {
         where: {
           userId,
         },
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_likeComment AS ulc WHERE ulc.commentId = CommentModel.commentId)`,
+              ),
+              'commentLikeCount',
+            ],
+          ],
+        },
         include: [
           {
             model: PostModel,
@@ -98,23 +108,27 @@ export class MeCommentService {
           },
           {
             model: UserModel,
+            as: 'user',
           },
           {
             model: CommentModel,
             as: 'parentComment',
-            include: [UserModel],
+            include: [{ model: UserModel, as: 'user' }],
           },
           {
             model: CommentModel,
             as: 'comments',
-            include: [
-              UserModel,
-              {
-                model: CommentModel,
-                as: 'comments',
-                include: [UserModel],
-              },
-            ],
+            attributes: {
+              include: [
+                [
+                  Sequelize.literal(
+                    `(SELECT COUNT(*) FROM user_likeComment AS ulc WHERE ulc.commentId = comments.commentId)`,
+                  ),
+                  'commentLikeCount',
+                ],
+              ],
+            },
+            include: [{ model: UserModel, as: 'user' }],
           },
         ],
       });

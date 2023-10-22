@@ -1,6 +1,7 @@
 import {
   AutoIncrement,
   BelongsTo,
+  BelongsToMany,
   Column,
   DataType,
   ForeignKey,
@@ -13,6 +14,7 @@ import {
 import { TimeStamp } from 'src/types';
 import { UserModel, UserModelType } from './user.model';
 import { PostModel } from './post.model';
+import { UserLikeCommentModel } from './userLikeComment.model';
 
 export interface CommentModelType extends TimeStamp {
   commentId: number;
@@ -33,7 +35,7 @@ export class CommentModel extends Model<CommentModelType> {
     primaryKey: true,
     unique: true,
     autoIncrement: true,
-    allowNull: true,
+    allowNull: false,
     type: DataType.INTEGER,
   })
   commentId: number;
@@ -62,6 +64,14 @@ export class CommentModel extends Model<CommentModelType> {
   @BelongsTo(() => CommentModel, { foreignKey: 'parentCommentId' })
   parentComment: CommentModel;
 
-  @HasMany(() => CommentModel, 'parentCommentId')
+  @HasMany(() => CommentModel)
   comments: CommentModel[];
+
+  @BelongsToMany(() => UserModel, {
+    through: () => UserLikeCommentModel,
+    foreignKey: 'commentId',
+    otherKey: 'userId',
+    as: 'likedByUser',
+  })
+  likedByUser: UserModel[];
 }

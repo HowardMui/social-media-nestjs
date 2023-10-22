@@ -9,3 +9,4 @@ export * from './comment.model';
 export * from './postTag.model';
 export * from './admin.model';
 export * from './adminAuth.model';
+export * from './userLikeComment.model';

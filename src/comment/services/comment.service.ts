@@ -7,9 +7,15 @@ import {
 import { CreateCommentDTO, GetAllPostCommentParams } from '../dto';
 import { orderByFilter } from 'src/helper';
 import { InjectModel } from '@nestjs/sequelize';
-import { CommentModel, PostModel, UserModel } from 'src/models';
+import {
+  CommentModel,
+  PostModel,
+  UserLikeCommentModel,
+  UserModel,
+} from 'src/models';
 import { Op } from 'sequelize';
 import { errorHandler } from 'src/error-handler';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class CommentService {
@@ -18,6 +24,8 @@ export class CommentService {
     private commentModel: typeof CommentModel,
     @InjectModel(PostModel)
     private postModel: typeof PostModel,
+    @InjectModel(UserLikeCommentModel)
+    private userLikeCommentModel: typeof UserLikeCommentModel,
   ) {}
 
   async getPostCommentList(postId: number, query: GetAllPostCommentParams) {
@@ -30,6 +38,16 @@ export class CommentService {
             [Op.not]: true,
           },
         },
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_likeComment AS ulc WHERE ulc.commentId = CommentModel.commentId)`,
+              ),
+              'commentLikeCount',
+            ],
+          ],
+        },
         include: [
           {
             model: PostModel,
@@ -37,17 +55,21 @@ export class CommentService {
           {
             model: CommentModel,
             as: 'comments',
-            include: [
-              UserModel,
-              {
-                model: CommentModel,
-                as: 'comments',
-                include: [UserModel],
-              },
-            ],
+            attributes: {
+              include: [
+                [
+                  Sequelize.literal(
+                    `(SELECT COUNT(*) FROM user_likeComment AS ulc WHERE ulc.commentId = comments.commentId)`,
+                  ),
+                  'commentLikeCount',
+                ],
+              ],
+            },
+            include: [{ model: UserModel, as: 'user' }],
           },
           {
             model: UserModel,
+            as: 'user',
           },
         ],
         order: orderByFilter(asc, desc) ?? [['createdAt', 'DESC']],
@@ -122,6 +144,58 @@ export class CommentService {
           commentId,
         },
       });
+      return { status: HttpStatus.OK };
+    } catch (err) {
+      console.log(err);
+      return errorHandler(err);
+    }
+  }
+
+  // * Like comment services
+  async likeACommentByUser(commentId: number, userId: number) {
+    try {
+      const findLikedComment = await this.userLikeCommentModel.findOne({
+        where: {
+          commentId,
+          userId,
+        },
+      });
+
+      if (findLikedComment) {
+        return new BadRequestException('Already liked');
+      } else {
+        await this.userLikeCommentModel.create({
+          commentId,
+          userId,
+        });
+      }
+
+      return { status: HttpStatus.CREATED };
+    } catch (err) {
+      console.log(err);
+      return errorHandler(err);
+    }
+  }
+
+  async unLikeACommentByUser(commentId: number, userId: number) {
+    try {
+      const findLikedComment = await this.userLikeCommentModel.findOne({
+        where: {
+          commentId,
+          userId,
+        },
+      });
+
+      if (findLikedComment) {
+        await this.userLikeCommentModel.destroy({
+          where: {
+            commentId,
+            userId,
+          },
+        });
+      } else {
+        return new BadRequestException('Comment does not exist');
+      }
       return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);

@@ -18,6 +18,7 @@ import { RePostModel } from './userPostAndRePost.mode';
 import { LikePostModel } from './likePost.model';
 import { BookmarkPostModel } from './bookmarkPost.model';
 import { CommentModel } from './comment.model';
+import { UserLikeCommentModel } from './userLikeComment.model';
 
 export interface UserModelType {
   userId?: number;
@@ -126,4 +127,12 @@ export class UserModel extends Model<UserModelType> {
 
   @HasMany(() => CommentModel)
   comments: CommentModel[];
+
+  @BelongsToMany(() => CommentModel, {
+    through: () => UserLikeCommentModel,
+    foreignKey: 'userId',
+    otherKey: 'commentId',
+    as: 'likedComments',
+  })
+  likedComments: CommentModel[];
 }

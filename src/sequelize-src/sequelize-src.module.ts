@@ -11,6 +11,7 @@ import {
   TagModel,
   UserAuthModel,
   UserFollowModel,
+  UserLikeCommentModel,
   UserLogModel,
   UserModel,
 } from 'src/models';
@@ -46,6 +47,7 @@ import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
             PostTagModel,
             AdminModel,
             AdminAuthModel,
+            UserLikeCommentModel,
           ],
         };
       },
