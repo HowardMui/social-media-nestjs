@@ -1,36 +1,28 @@
 import {
   BadRequestException,
-  ConsoleLogger,
   HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   CreatePostDTO,
   GetPostQueryParamsWithFilter,
-  PostResponse,
+  UpdatePostDTO,
 } from './dto';
-import {
-  orderByFilter,
-  returnAscOrDescInQueryParamsWithFilter,
-} from 'src/helper';
-import { ListResponse } from 'src/types';
+import { orderByFilter } from 'src/helper';
 import { RedisService } from 'src/redis/redis.service';
-import { formatDataToRedis } from 'src/helper/format-data-to-redis';
 import { Sequelize } from 'sequelize-typescript';
 import { InjectModel } from '@nestjs/sequelize';
 import {
   CommentModel,
   PostModel,
-  PostModelType,
   PostTagModel,
   TagModel,
   UserModel,
 } from 'src/models';
 import { errorHandler } from 'src/error-handler';
-import { Op, WhereOptions } from 'sequelize';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class PostService {
@@ -260,7 +252,7 @@ export class PostService {
   }
 
   async createOnePost(body: CreatePostDTO, userId: number) {
-    const { tagName, ...postBody } = body;
+    const { tagName, ...rest } = body;
 
     try {
       await this.sequelize.transaction(async (t) => {
@@ -273,7 +265,7 @@ export class PostService {
 
         const createdPost = await this.postModel.create(
           {
-            ...postBody,
+            ...rest,
             userId,
           },
           transactionHost,
@@ -291,6 +283,49 @@ export class PostService {
       });
 
       return HttpStatus.CREATED;
+    } catch (err) {
+      console.log(err);
+      return errorHandler(err);
+    }
+  }
+
+  async updateOnePost(body: UpdatePostDTO, postId: number) {
+    const { tagName } = body;
+
+    try {
+      await this.sequelize.transaction(async (t) => {
+        const transactionHost = { transaction: t };
+        const postTags = await Promise.all(
+          tagName.map((tagName) =>
+            TagModel.findOrCreate({ where: { tagName }, ...transactionHost }),
+          ),
+        );
+
+        await this.postModel.update(
+          {
+            ...body,
+          },
+          {
+            where: {
+              postId,
+            },
+            ...transactionHost,
+          },
+        );
+
+        await this.postTagModel.bulkCreate(
+          postTags
+            .filter(([tag, created]) => created === true)
+            .map((tag) => {
+              return {
+                postId,
+                tagId: tag[0].tagId,
+              };
+            }),
+          transactionHost,
+        );
+      });
+      return HttpStatus.OK;
     } catch (err) {
       console.log(err);
       return errorHandler(err);

@@ -21,6 +21,7 @@ import {
   CreatePostDTO,
   GetPostQueryParamsWithFilter,
   PostResponse,
+  UpdatePostDTO,
 } from './dto';
 import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 
@@ -60,10 +61,13 @@ export class PostController {
 
   @Patch(':postId')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({ summary: 'Update one post. App User only (Not yet finish)' })
-  updateUserPost(@Param('postId', new ParseIntPipe()) postId: number) {
-    return null;
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Update one post. Admin only' })
+  updateUserPost(
+    @Param('postId', new ParseIntPipe()) postId: number,
+    @Body() body: UpdatePostDTO,
+  ) {
+    return this.postService.updateOnePost(body, postId);
   }
 
   @Delete(':postId')
