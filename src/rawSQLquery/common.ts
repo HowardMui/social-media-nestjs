@@ -4,7 +4,7 @@ export const selectUserRawQuery = `
     u.lastName as "user.lastName",
     u.email as "user.email",
     u.userName as "user.userName",
-    u.image as "user.image",
+    u.avatar as "user.avatar",
     u.bio as "user.bio",
     u.description as "user.description",
     u.createdAt as "user.createdAt",
@@ -12,7 +12,7 @@ export const selectUserRawQuery = `
 `;
 
 export const selectPostRawQuery = `
-    p.postId, p.content, p.image, p.userId
+    p.postId, p.content, p.images, p.userId
 `;
 
 export const selectTagRawQuery = `

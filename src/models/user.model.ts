@@ -26,7 +26,7 @@ export interface UserModelType {
   lastName: string;
   email: string;
   userName: string;
-  image: string;
+  avatar: string;
   bio: string;
   description: string;
   UserAuths: UserAuthModelType[];
@@ -73,7 +73,7 @@ export class UserModel extends Model<UserModelType> {
   userName: string;
 
   @Column(DataType.TEXT)
-  image: string;
+  avatar: string;
 
   @Column(DataType.TEXT)
   bio: string;

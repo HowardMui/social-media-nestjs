@@ -17,7 +17,7 @@ export class UpdateMeProfileDTO {
   @ApiProperty()
   @IsOptional()
   @IsString()
-  image?: string;
+  avatar?: string;
 
   @ApiProperty()
   @IsOptional()

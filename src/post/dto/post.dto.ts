@@ -1,11 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsArray,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { IsOptional } from 'class-validator';
 
 import { QueryParamsWithFilter, TimeStamp } from 'src/types';
 import { UserResponse, UserResponseExampleDTO } from 'src/user/dto';
@@ -48,25 +42,3 @@ export const PostResponseExampleDTO = {
   updatedAt: 'string',
   deletedAt: 'string',
 };
-
-export class CreatePostDTO {
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(200)
-  content: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  image: string;
-
-  @ApiProperty({ type: [String], required: false })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  @MaxLength(30, {
-    each: true,
-    message: 'tagName must not be more than 30 characters long',
-  })
-  tagName?: string[];
-}

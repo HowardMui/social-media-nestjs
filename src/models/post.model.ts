@@ -7,6 +7,7 @@ import {
   DataType,
   ForeignKey,
   HasMany,
+  Length,
   Model,
   Table,
   Unique,
@@ -23,7 +24,7 @@ import { CommentModel } from './comment.model';
 
 export interface PostModelType extends TimeStamp {
   postId: number;
-  image: string;
+  images: string[];
   content: string;
   userId: number;
   user: UserModelType;
@@ -43,9 +44,13 @@ export class PostModel extends Model<PostModelType> {
   })
   postId: number;
 
-  @Column(DataType.TEXT)
-  image: string;
+  @Column(DataType.JSON)
+  images: string[];
 
+  @Length({
+    max: 2000,
+    msg: 'Minimum 2000 character in content',
+  })
   @Column(DataType.TEXT)
   content: string;
 
