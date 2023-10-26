@@ -1,19 +1,13 @@
 import {
-  AllowNull,
-  AutoIncrement,
   BelongsTo,
   Column,
-  CreatedAt,
-  DeletedAt,
+  DataType,
   ForeignKey,
+  IsEmail,
   Model,
-  PrimaryKey,
   Table,
-  Unique,
-  UpdatedAt,
 } from 'sequelize-typescript';
 import { UserModel } from './user.model';
-import { CreationOptional, Optional } from 'sequelize';
 
 export interface UserAuthModelType {
   userAuthId?: number;
@@ -23,42 +17,33 @@ export interface UserAuthModelType {
   userId?: number;
 }
 
-type UserAuthModelOptionalType = Optional<UserAuthModelType, 'userAuthId'>;
-
 @Table({ tableName: 'userAuth' })
-export class UserAuthModel extends Model<
-  UserAuthModelType,
-  UserAuthModelOptionalType
-> {
-  @PrimaryKey
-  @Unique
-  @AutoIncrement
-  @AllowNull
-  @Column
-  userAuthId?: number;
+export class UserAuthModel extends Model<UserAuthModelType> {
+  @Column({
+    primaryKey: true,
+    autoIncrement: true,
+    allowNull: false,
+    type: DataType.INTEGER,
+  })
+  userAuthId: number;
 
-  @Column
+  @IsEmail
+  @Column({
+    type: DataType.STRING,
+    allowNull: false,
+  })
   email: string;
 
-  @Column
+  @Column(DataType.TEXT)
   hash: string;
 
-  @Column({ allowNull: true })
+  @Column({ allowNull: true, type: DataType.TEXT })
   provider: string;
 
   @ForeignKey(() => UserModel)
-  @Column
+  @Column(DataType.INTEGER)
   userId: number;
 
   @BelongsTo(() => UserModel)
   user: UserModel;
-
-  @CreatedAt
-  createdAt: Date;
-
-  @UpdatedAt
-  updatedAt: Date;
-
-  @DeletedAt
-  declare deletedAt: CreationOptional<Date>;
 }
