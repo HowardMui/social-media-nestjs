@@ -31,7 +31,12 @@ import { BookmarkPostModel } from 'src/models/bookmarkPost.model';
           username: config.get('MYSQL_USERNAME'),
           password: config.get('MYSQL_PASSWORD'),
           database: config.get('MYSQL_DATABASE'),
-          autoLoadModels: true,
+          dialectOptions: {
+            ssl: {
+              rejectUnauthorized: true,
+            },
+          },
+          autoLoadModels: config.get('DEV_STAGE') ? true : false,
           synchronize: true,
           models: [
             UserModel,
