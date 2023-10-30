@@ -20,13 +20,9 @@ import { MeService } from './me.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import {
-  GetMeBookMarkedPostRes,
-  GetMeLikedQueryParams,
-  GetMeLikedResponse,
   MeProfileResponse,
   GetMePostResponse,
   GetMePostQueryParams,
-  GetMeBookmarkedQueryParams,
   UserSignInDTO,
   UserSignUpDTO,
 } from './dto';
@@ -43,7 +39,10 @@ export class MeController {
   // * Auth ------------------------------------------------------------------------------------
 
   @Post('signIn')
-  @ApiOkResponse({ status: 201, description: 'Login success' })
+  @ApiOkResponse({
+    status: 201,
+    description: 'Login success.',
+  })
   @ApiForbiddenResponse()
   @ApiOperation({ summary: 'User Sign In' })
   login(
