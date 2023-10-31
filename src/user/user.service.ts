@@ -10,6 +10,7 @@ import { GetUserPostEnum, GetUserPostQuery } from './dto/user-post.dto';
 import { RedisService } from 'src/redis/redis.service';
 import { InjectModel } from '@nestjs/sequelize';
 import {
+  CommentModel,
   LikePostModel,
   PostModel,
   TagModel,
@@ -30,6 +31,8 @@ export class UserService {
     private userModel: typeof UserModel,
     @InjectModel(PostModel)
     private postModel: typeof PostModel,
+    @InjectModel(CommentModel)
+    private commentModel: typeof CommentModel,
     private sequelize: Sequelize,
   ) {}
 
@@ -259,74 +262,111 @@ export class UserService {
 
         // * Find user replied post
         case GetUserPostEnum.Replies:
-        // const countTheCommentWithGroupBy = this.prisma.comment.groupBy({
-        //   by: ['postId'],
-        //   where: {
-        //     userId,
-        //   },
-        // });
-
-        // const [commentedPostCount, commentedPostList] =
-        //   await this.prisma.$transaction([
-        //     countTheCommentWithGroupBy,
-        //     this.prisma.comment.findMany({
-        //       where: {
-        //         userId,
-        //       },
-        //       distinct: ['postId'],
-        //       select: {
-        //         post: {
-        //           include: {
-        //             user: true,
-        //             tags: true,
-        //             comments: {
-        //               where: {
-        //                 userId,
-        //               },
-        //               include: {
-        //                 parentComment: {
-        //                   include: {
-        //                     user: true,
-        //                   },
-        //                 },
-        //               },
-        //             },
-        //             _count: {
-        //               select: {
-        //                 likedByUser: true,
-        //                 comments: true,
-        //                 bookmarkedByUser: true,
-        //                 rePostOrderByUser: true,
-        //               },
-        //             },
-        //           },
-        //         },
-        //       },
-        //     }),
-        //   ]);
-
-        // const transformCommentedPosts = commentedPostList.map(({ post }) => {
-        //   const { _count, ...rest } = post;
-        //   return {
-        //     ...rest,
-        //     tags: post.tags.map((t) => t.tagName),
-        //     likedCount: _count.likedByUser,
-        //     commentCount: _count.comments,
-        //     bookmarkedCount: _count.bookmarkedByUser,
-        //     rePostedCount: _count.rePostOrderByUser,
-        //   };
-        // });
-
-        // const returnCommentedPostObject = {
-        //   count: commentedPostCount.length,
-        //   rows: transformCommentedPosts,
-        //   limit: limit ?? 0,
-        //   offset: offset ?? 20,
-        // };
-        // return returnCommentedPostObject;
+          const userReplies = await this.commentModel.findAndCountAll({
+            distinct: true,
+            limit: limit ?? 20,
+            offset: offset ?? 0,
+            where: {
+              userId,
+            },
+            include: [
+              {
+                model: PostModel,
+                attributes: {
+                  include: [
+                    [
+                      Sequelize.literal(
+                        `(SELECT COUNT(*) FROM user_bookmarkPost AS bp WHERE bp.postId = postId)`,
+                      ),
+                      'bookmarkedCount',
+                    ],
+                    [
+                      Sequelize.literal(
+                        `(SELECT COUNT(*) FROM user_rePost AS rp WHERE rp.postId = postId)`,
+                      ),
+                      'rePostedCount',
+                    ],
+                    [
+                      Sequelize.literal(
+                        `(SELECT COUNT(*) FROM user_likePost AS lp WHERE lp.postId = postId)`,
+                      ),
+                      'likedCount',
+                    ],
+                    [
+                      Sequelize.literal(
+                        `(COALESCE(
+                            (SELECT 
+                            JSON_ARRAYAGG(t.tagName)
+                            FROM tag AS t INNER JOIN post_tag AS pt ON t.tagId = pt.tagId WHERE pt.postId = postId),
+                            CAST('[]' AS JSON))
+                            )`,
+                      ),
+                      'tags',
+                    ],
+                  ],
+                },
+                include: [
+                  {
+                    model: TagModel,
+                    attributes: [],
+                  },
+                  {
+                    model: UserModel,
+                    as: 'bookmarkedPostByUser',
+                    attributes: [],
+                  },
+                  {
+                    model: UserModel,
+                    as: 'likedPostByUser',
+                    attributes: [],
+                  },
+                  {
+                    model: UserModel,
+                    as: 'rePostedByUser',
+                    attributes: [],
+                  },
+                  {
+                    model: UserModel,
+                    as: 'user',
+                  },
+                ],
+              },
+              {
+                model: UserModel,
+                as: 'user',
+              },
+              {
+                model: CommentModel,
+                as: 'parentComment',
+                include: [{ model: UserModel, as: 'user' }],
+              },
+              {
+                model: CommentModel,
+                as: 'comments',
+                attributes: {
+                  include: [
+                    [
+                      Sequelize.literal(
+                        `(SELECT COUNT(*) FROM user_likeComment AS ulc WHERE ulc.commentId = comments.commentId)`,
+                      ),
+                      'commentLikeCount',
+                    ],
+                  ],
+                },
+                include: [{ model: UserModel, as: 'user' }],
+              },
+            ],
+          });
+          return {
+            count: userReplies.count,
+            rows: userReplies.rows,
+            limit: limit ?? 20,
+            offset: offset ?? 0,
+          };
       }
     } catch (err) {
       console.log(err);
+      return errorHandler(err);
     }
   }
 
