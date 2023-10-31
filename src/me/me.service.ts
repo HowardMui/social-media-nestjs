@@ -1,41 +1,46 @@
 import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   GetMeLikedQueryParams,
-  GetMeFollowingQueryParams,
-  GetMeFollowersQueryParams,
   GetMePostQueryParams,
   GetMeBookmarkedQueryParams,
   UserSignInDTO,
   UserSignUpDTO,
-  GetMeCommentQueryParams,
-  GetMeCommentResponse,
-  GetMeFollowingResponse,
-  GetMeFollowersResponse,
 } from './dto';
 import { Request, Response } from 'express';
 import * as argon from 'argon2';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as _ from 'lodash';
-import { PostResponse } from 'src/post/dto';
 import { UpdateMeProfileDTO } from './dto/me-update-profile.dto';
 import {
   formatResponseListData,
-  formatDataToRedis,
   formatDevice,
   formatListResponseObject,
 } from 'src/helper';
 import { RedisService } from 'src/redis/redis.service';
-import { ListResponse } from 'src/types';
+import { InjectModel } from '@nestjs/sequelize';
+import { UserFollowModel, UserModel } from 'src/models';
+import { UserAuthModel } from 'src/models/userAuth.model';
+import { Sequelize } from 'sequelize-typescript';
+import { errorHandler } from 'src/error-handler';
+import { UserLogModel } from 'src/models/userLog.model';
+import {
+  findMeFollowingPostAndRePost,
+  findMeFollowingPostAndRePostCount,
+  userPostAndRePost,
+  userPostAndRePostCount,
+} from 'src/rawSQLquery';
 
 @Injectable()
 export class MeService {
   constructor(
-    private prisma: PrismaSrcService,
     private jwt: JwtService,
     private config: ConfigService,
     private redis: RedisService,
+    @InjectModel(UserModel)
+    private userModel: typeof UserModel,
+    @InjectModel(UserLogModel)
+    private userLogModel: typeof UserLogModel,
+    private sequelize: Sequelize,
   ) {}
 
   // * Auth ------------------------------------------------------------------------------------
@@ -49,22 +54,26 @@ export class MeService {
     const { email, password } = dto;
     const { client, device, os } = formatDevice(req);
     try {
-      await this.prisma.$transaction(async (tx) => {
+      await this.sequelize.transaction(async (t) => {
+        const transactionHost = { transaction: t };
+
         // * 1. Find user
-        const findUser = await tx.user.findUnique({
-          where: { email },
-          include: { UserAuths: true },
+        const user = await this.userModel.findOne({
+          where: {
+            email,
+          },
+          include: [UserAuthModel],
         });
 
-        if (!findUser) {
+        if (!user) {
           throw new ForbiddenException('Cannot find user');
-        } else if (!findUser.UserAuths.length) {
+        } else if (!user.UserAuths.length) {
           throw new ForbiddenException('Invalid user.  Please find Admin');
         }
 
         // * 2. Compare hash password
         const passwordMatch = await argon.verify(
-          findUser.UserAuths[0].hash,
+          user.UserAuths[0].hash,
           password,
         );
         if (!passwordMatch) {
@@ -72,21 +81,21 @@ export class MeService {
         }
 
         // * 3. Add record to log table
-        await tx.logTable.create({
-          data: {
-            userId: findUser.userId,
+        await this.userLogModel.create(
+          {
+            userId: user.userId,
             userType: 'user',
             ipAddress: signInIpAddress,
             device: `${device.type}-${device.brand}-${os.name}-${os.version}-${client.type}-${client.name}-${client.version}`,
           },
-        });
+          transactionHost,
+        );
 
         res
           .status(200)
           .cookie(
             'token',
-            (await this.userSignToken(findUser.userId, findUser.email))
-              .access_token,
+            (await this.userSignToken(user.userId, user.email)).access_token,
             {
               httpOnly: true,
               sameSite: 'none',
@@ -94,7 +103,7 @@ export class MeService {
             },
           );
       });
-      return { status: HttpStatus.CREATED };
+      return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
       return err;
@@ -105,35 +114,28 @@ export class MeService {
     const { email, password, userName } = dto;
 
     try {
-      // Generate hash password
+      // * Generate hash password
       const hash = await argon.hash(password);
 
-      // Create new User
-      const newUser = await this.prisma.user.create({
-        data: {
-          userName,
+      // * Create new User with sequelize
+      const newUser = await this.userModel.create(
+        {
           email,
-          UserAuths: {
-            create: {
+          userName,
+          UserAuths: [
+            {
               hash,
               email,
             },
-          },
+          ],
         },
-        include: {
-          UserAuths: true,
-        },
-      });
+        { include: [UserAuthModel] },
+      );
 
       return newUser;
-    } catch (err) {
+    } catch (err: Error | any) {
       console.log(err);
-
-      if (err.code === 'P2002') {
-        throw new ForbiddenException('Email already exist');
-      }
-
-      throw err;
+      return errorHandler(err);
     }
   }
 
@@ -172,316 +174,63 @@ export class MeService {
   async getCurrentUserProfile(currentUserId: number) {
     try {
       // * gmpf = get me profile
-      const cacheMeProfile =
-        await this.redis.getRedisValue<GetMeFollowersResponse>(`gmpf`);
-      if (cacheMeProfile) {
-        return cacheMeProfile;
-      } else {
-        const findMe = await this.prisma.user.findUnique({
-          where: {
-            userId: currentUserId,
-          },
-          include: {
-            _count: {
-              select: {
-                followers: true,
-                following: true,
-              },
-            },
-          },
-        });
-        const { _count, ...rest } = findMe;
-        const formattedProfile = {
-          ...rest,
-          followersCount: _count.followers,
-          followingCount: _count.following,
-        };
-        await this.redis.setRedisValue(`gmpf`, formattedProfile);
-        return formattedProfile;
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  async updateMe(req: Request, dto: UpdateMeProfileDTO) {
-    try {
-      const testUpdate = await this.prisma.user.update({
-        where: {
-          userId: req.user['userId'],
+      // const cacheMeProfile =
+      //   await this.redis.getRedisValue<GetMeFollowersResponse>(`gmpf`);
+      // if (cacheMeProfile) {
+      //   return cacheMeProfile;
+      // } else {
+      const currentUser = await this.userModel.findByPk(currentUserId, {
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followerId = UserModel.userId)`,
+              ),
+              'followingCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followingId = UserModel.userId)`,
+              ),
+              'followerCount',
+            ],
+          ],
         },
-        data: dto,
+        include: [
+          {
+            model: UserFollowModel,
+            as: 'following',
+            attributes: [],
+          },
+          {
+            model: UserFollowModel,
+            as: 'followers',
+            attributes: [],
+          },
+        ],
       });
-      return testUpdate;
+      // await this.redis.setRedisValue(`gmpf`, currentUser);
+      return currentUser;
+      // }
     } catch (err) {
       console.log(err);
     }
   }
 
-  // * Follower or Following Action ---------------------------------------------------------------------
-
-  async getUserFollowers(userId: number, query: GetMeFollowersQueryParams) {
-    const { limit, offset } = query;
-
+  async updateMe(userId: number, dto: UpdateMeProfileDTO) {
     try {
-      // * gmfe = get my followers
-      const cacheFollowersData = await this.redis.getRedisValue<
-        ListResponse<GetMeFollowersResponse>
-      >(`gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query, userId)}`);
-      if (cacheFollowersData) {
-        return cacheFollowersData;
-      } else {
-        const [totalFollowers, followersList] = await this.prisma.$transaction([
-          this.prisma.user.findUnique({
-            where: {
-              userId,
-            },
-            select: {
-              _count: {
-                select: {
-                  followers: true,
-                },
-              },
-            },
-          }),
-          this.prisma.user.findUnique({
-            where: {
-              userId,
-            },
-            select: {
-              followers: {
-                skip: offset || 0,
-                take: limit || 20,
-                include: {
-                  followers: true,
-                },
-              },
-            },
-          }),
-        ]);
-        // * Add isFollowing boolean into return list
-        const formatFollowersList = followersList.followers.map(
-          ({ followers, ...restFollower }) => {
-            const isFollowing = followers.some(
-              (eachUserInFollowers) => eachUserInFollowers.userId === userId,
-            );
-            return {
-              ...restFollower,
-              isFollowing,
-            };
+      await this.userModel.update(
+        {
+          ...dto,
+        },
+        {
+          where: {
+            userId,
           },
-        );
+        },
+      );
 
-        const response = {
-          count: totalFollowers._count.followers,
-          rows: formatFollowersList,
-          limit: limit ?? 0,
-          offset: offset ?? 20,
-        };
-        await this.redis.setRedisValue(
-          `gmfe${formatDataToRedis<GetMeFollowersQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
-    } catch (err) {
-      console.log(err);
-      throw err;
-    }
-  }
-
-  async getUserFollowing(userId: number, query: GetMeFollowingQueryParams) {
-    const { limit, offset } = query;
-    try {
-      // * gmfi = get my following
-      const cacheFollowingData = await this.redis.getRedisValue<
-        ListResponse<GetMeFollowingResponse>
-      >(`gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query, userId)}`);
-      if (cacheFollowingData) {
-        return cacheFollowingData;
-      } else {
-        const [totalFollowing, followingList] = await this.prisma.$transaction([
-          // * Find one and find total
-          this.prisma.user.findUnique({
-            where: {
-              userId,
-            },
-            select: {
-              _count: {
-                select: {
-                  following: true,
-                },
-              },
-            },
-          }),
-          this.prisma.user.findUnique({
-            where: {
-              userId,
-            },
-            select: {
-              following: {
-                skip: offset || 0,
-                take: limit || 20,
-                include: {
-                  followers: true,
-                },
-              },
-            },
-          }),
-        ]);
-
-        // * Add isFollowing boolean into return list
-        const transformFollowingList = followingList.following.map(
-          ({ followers, ...restFollower }) => {
-            const isFollowing = followers.some(
-              (eachUserInFollowers) => eachUserInFollowers.userId === userId,
-            );
-            return {
-              ...restFollower,
-              isFollowing,
-            };
-          },
-        );
-
-        const response = {
-          count: totalFollowing._count.following,
-          rows: transformFollowingList,
-          limit: limit ?? 0,
-          offset: offset ?? 20,
-        };
-        await this.redis.setRedisValue(
-          `gmfi${formatDataToRedis<GetMeFollowingQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
-    } catch (err) {
-      console.log(err);
-      throw err;
-    }
-  }
-
-  // * bookmark Action ------------------------------------------------------------------------------------
-
-  async getAllMeBookmarkList(
-    query: GetMeBookmarkedQueryParams,
-    userId: number,
-  ) {
-    const { limit, offset } = query;
-
-    try {
-      // * gmpb = get my post bookmark
-      const cachedBookmarkedData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(`gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query, userId)}`);
-      if (cachedBookmarkedData) {
-        return cachedBookmarkedData;
-      } else {
-        const [totalBookmarkedPost, bookmarkedPostList] =
-          await this.prisma.$transaction([
-            this.prisma.userBookmark.count({
-              where: {
-                userId,
-              },
-            }),
-            this.prisma.post.findMany({
-              where: {
-                bookmarkedByUser: {
-                  some: {
-                    userId,
-                  },
-                },
-              },
-              skip: offset ?? 0,
-              take: limit ?? 20,
-              include: {
-                user: true,
-                tags: true,
-                _count: {
-                  select: {
-                    likedByUser: true,
-                    comments: true,
-                    bookmarkedByUser: true,
-                    rePostOrderByUser: true,
-                  },
-                },
-              },
-            }),
-          ]);
-
-        const response = formatListResponseObject({
-          rows: bookmarkedPostList.map((post) => formatResponseListData(post)),
-          count: totalBookmarkedPost,
-          limit,
-          offset,
-        });
-        await this.redis.setRedisValue(
-          `gmpb${formatDataToRedis<GetMeBookmarkedQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  // * like Action ------------------------------------------------------------------------------------
-
-  async getMeLikedPostList(query: GetMeLikedQueryParams, userId: number) {
-    const { limit, offset } = query;
-
-    try {
-      // * gmpl = get my post like
-      const cachedLikedPostData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(`gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`);
-      if (cachedLikedPostData) {
-        return cachedLikedPostData;
-      } else {
-        const [totalLikedPost, likedPostList] = await this.prisma.$transaction([
-          this.prisma.userLikedPost.count({
-            where: {
-              userId,
-            },
-          }),
-          this.prisma.userLikedPost.findMany({
-            where: {
-              userId,
-            },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-            select: {
-              post: {
-                include: {
-                  user: true,
-                  tags: true,
-                  _count: {
-                    select: {
-                      likedByUser: true,
-                      comments: true,
-                      bookmarkedByUser: true,
-                      rePostOrderByUser: true,
-                    },
-                  },
-                },
-              },
-            },
-          }),
-        ]);
-
-        const response = formatListResponseObject({
-          rows: likedPostList.map((post) => formatResponseListData(post)),
-          count: totalLikedPost,
-          limit,
-          offset,
-        });
-        await this.redis.setRedisValue(
-          `gmpl${formatDataToRedis<GetMeLikedQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
+      return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
     }
@@ -493,297 +242,42 @@ export class MeService {
     const { limit, offset } = query;
 
     try {
-      // ! Raw prisma sql query, old version of User repost joining
+      // * gamp = get all my posts
       // const cachedAllMePostData = await this.redis.getRedisValue<
       //   ListResponse<PostResponse>
-      // >(`gamp${formatDataToRedis<GetMePostQueryParams>(query)}`);
+      // >(`gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`);
       // if (cachedAllMePostData) {
       //   return cachedAllMePostData;
       // } else {
-      //   const postsQuery = await this.prisma.$queryRaw<
-      //     { count: number; rows: PostResponse[] }[]
-      //   >`
-      //       WITH "Posts" AS (
-      //         SELECT "Post".*, pt."tags",
-      //           COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
-      //           COALESCE(lc.likesCount::integer, 0) AS "likesCount",
-      //           COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
-      //         FROM "User"
-      //         LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
-      //         LEFT JOIN "Post" ON "Post"."postId" = "user_rePost_posts"."postId"
-      //         LEFT JOIN (
-      //           SELECT "Post"."postId",
-      //             CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
-      //               ELSE '[]' END AS "tags"
-      //           FROM "Post"
-      //           LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-      //           LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-      //           GROUP BY "Post"."postId"
-      //         ) pt ON pt."postId" = "Post"."postId"
-      //         LEFT JOIN (
-      //           SELECT
-      //             "postId",
-      //             COUNT(*) AS commentsCount
-      //           FROM
-      //             "Comment"
-      //           GROUP BY
-      //             "postId"
-      //         ) pc ON pc."postId" = "Post"."postId"
-      //         LEFT JOIN (
-      //           SELECT
-      //             "postId",
-      //             COUNT(*) AS likesCount
-      //           FROM
-      //             "user_liked_posts"
-      //           GROUP BY
-      //             "postId"
-      //         ) lc ON lc."postId" = "Post"."postId"
-      //         LEFT JOIN (
-      //           SELECT
-      //             "postId",
-      //             COUNT(*) AS rePostsCount
-      //           FROM
-      //             "user_rePost_posts"
-      //           GROUP BY
-      //             "postId"
-      //         ) rc ON rc."postId" = "Post"."postId"
-      //         WHERE "User"."userId" = ${userId}
-      //         -- // * UNION All (Combine two different table and query)
-      //         UNION ALL
-      //         SELECT "Post".*, pt."tags",
-      //           COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
-      //           COALESCE(lc.likesCount::integer, 0) AS "likesCount",
-      //           COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
-      //         FROM "User"
-      //         LEFT JOIN "Post" ON "Post"."userId" = "User"."userId"
-      //         LEFT JOIN (
-      //           SELECT "Post"."postId",
-      //             CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
-      //               ELSE '[]' END AS "tags"
-      //           FROM "Post"
-      //           LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-      //           LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-      //           GROUP BY "Post"."postId"
-      //         ) pt ON pt."postId" = "Post"."postId"
-      //         LEFT JOIN (
-      //           SELECT
-      //             "postId",
-      //             COUNT(*) AS commentsCount
-      //           FROM
-      //             "Comment"
-      //           GROUP BY
-      //             "postId"
-      //         ) pc ON pc."postId" = "Post"."postId"
-      //         LEFT JOIN (
-      //           SELECT
-      //             "postId",
-      //             COUNT(*) AS likesCount
-      //           FROM
-      //             "user_liked_posts"
-      //           GROUP BY
-      //             "postId"
-      //         ) lc ON lc."postId" = "Post"."postId"
-      //         LEFT JOIN (
-      //           SELECT
-      //             "postId",
-      //             COUNT(*) AS rePostsCount
-      //           FROM
-      //             "user_rePost_posts"
-      //           GROUP BY
-      //             "postId"
-      //         ) rc ON rc."postId" = "Post"."postId"
-      //         WHERE "User"."userId" = ${userId}
-      //         -- ORDER BY "createdAt" DESC
-      //         -- LIMIT ${limit || 20}
-      //         -- OFFSET ${offset || 0}
-      //       ),
-      //       -- // * find out the query and filter it
-      //       "PaginatedPosts" AS (
-      //         SELECT *
-      //         FROM "Posts"
-      //         ORDER BY "createdAt" DESC
-      //         LIMIT ${limit || 20}
-      //         OFFSET ${offset || 0}
-      //       ),
-      //       -- // * reform the the data into rows and count (count form the Posts -> avoid involve into the pagination)
-      //       "AggregatedPosts" AS (
-      //         SELECT json_agg("PaginatedPosts") AS "rows", (SELECT COUNT(*) FROM "Posts")::integer AS "count"
-      //         FROM "PaginatedPosts"
-      //       )
-      //       SELECT "count", "rows"
-      //       FROM "AggregatedPosts";
-      //     `;
-      //   const returnAllPostObject = {
-      //     count: postsQuery[0].count,
-      //     rows: postsQuery[0].rows,
-      //     limit: limit ?? 20,
-      //     offset: offset ?? 0,
-      //   };
-      //   await this.redis.setRedisValue(
-      //     `gamp${formatDataToRedis<GetMePostQueryParams>(query)}`,
-      //     returnAllPostObject,
-      //   );
-      //   return returnAllPostObject;
+
+      //       { '$rePostedByUser.userId$': userId }, // Find posts re-posted by the current user
+
+      // await this.redis.setRedisValue(
+      //   `gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`,
+      //   response,
+      // );
+      // return response;
+
+      // TODO raw sequelize SQL
+      const response = await this.sequelize.query(
+        userPostAndRePost({ userId, limit, offset }),
+        {
+          nest: true,
+        },
+      );
+
+      const count = await this.sequelize.query(userPostAndRePostCount(userId), {
+        plain: true,
+      });
+
+      return {
+        count: count.count,
+        rows: response,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
+      };
+
       // }
-
-      // * gamp = get all my posts
-      const cachedAllMePostData = await this.redis.getRedisValue<
-        ListResponse<PostResponse>
-      >(`gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`);
-      if (cachedAllMePostData) {
-        return cachedAllMePostData;
-      } else {
-        const [postCount, postList] = await this.prisma.$transaction([
-          this.prisma.userPostOrder.count({
-            where: {
-              userId,
-            },
-          }),
-          this.prisma.userPostOrder.findMany({
-            where: {
-              userId,
-            },
-            include: {
-              post: {
-                include: {
-                  tags: {
-                    select: {
-                      tagName: true,
-                    },
-                  },
-                  user: true,
-                  _count: {
-                    select: {
-                      likedByUser: true,
-                      comments: true,
-                      bookmarkedByUser: true,
-                      rePostOrderByUser: true,
-                    },
-                  },
-                },
-              },
-              rePost: {
-                include: {
-                  tags: {
-                    select: {
-                      tagName: true,
-                    },
-                  },
-                  user: true,
-                  _count: {
-                    select: {
-                      likedByUser: true,
-                      comments: true,
-                      bookmarkedByUser: true,
-                      rePostOrderByUser: true,
-                    },
-                  },
-                },
-              },
-              user: true,
-            },
-            orderBy: {
-              createdAt: 'desc',
-            },
-            skip: offset ?? 0,
-            take: limit ?? 20,
-          }),
-        ]);
-
-        const response = formatListResponseObject({
-          rows: postList.map((post) =>
-            post.rePostId
-              ? formatResponseListData(post.rePost)
-              : formatResponseListData(post.post),
-          ),
-          count: postCount,
-          limit,
-          offset,
-        });
-
-        await this.redis.setRedisValue(
-          `gamp${formatDataToRedis<GetMePostQueryParams>(query, userId)}`,
-          response,
-        );
-        return response;
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  async getAllMeComment(query: GetMeCommentQueryParams, userId: number) {
-    const { limit, offset } = query;
-
-    try {
-      // * gmcl = get my comment list
-      const cachedMeCommentList = await this.redis.getRedisValue<
-        ListResponse<GetMeCommentResponse>
-      >(`gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`);
-      if (cachedMeCommentList) {
-        return cachedMeCommentList;
-      } else {
-        const [postCount, postListWithComment] = await this.prisma.$transaction(
-          [
-            this.prisma.post.count({
-              where: {
-                comments: {
-                  some: {
-                    userId,
-                  },
-                },
-              },
-            }),
-            this.prisma.post.findMany({
-              where: {
-                comments: {
-                  some: {
-                    userId,
-                  },
-                },
-              },
-              include: {
-                user: true,
-                tags: true,
-                comments: {
-                  where: {
-                    userId,
-                  },
-                  include: {
-                    parentComment: {
-                      include: {
-                        user: true,
-                      },
-                    },
-                  },
-                },
-                _count: {
-                  select: {
-                    likedByUser: true,
-                    comments: true,
-                    bookmarkedByUser: true,
-                    rePostOrderByUser: true,
-                  },
-                },
-              },
-            }),
-          ],
-        );
-
-        const response = formatListResponseObject({
-          count: postCount,
-          rows: postListWithComment.map((post) => formatResponseListData(post)),
-          limit,
-          offset,
-        });
-
-        await this.redis.setRedisValue(
-          `gmcl${formatDataToRedis<GetMeCommentQueryParams>(query, userId)}`,
-          response,
-        );
-
-        return response;
-      }
     } catch (err) {
       console.log(err);
     }
@@ -794,104 +288,105 @@ export class MeService {
 
     // ! Prisma currently not support the m-n relationship ordered by, need a fix in future
     try {
-      const [postCount, postList] = await this.prisma.$transaction([
-        this.prisma.post.count({
-          where: {
-            OR: [
-              {
-                user: {
-                  followers: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-              },
-              {
-                rePostOrderByUser: {
-                  some: {
-                    user: {
-                      followers: {
-                        some: {
-                          userId,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        }),
-        this.prisma.post.findMany({
-          where: {
-            OR: [
-              {
-                user: {
-                  followers: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-              },
-              {
-                rePostOrderByUser: {
-                  some: {
-                    user: {
-                      followers: {
-                        some: {
-                          userId,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-          include: {
-            user: true,
-            tags: {
-              select: {
-                tagName: true,
-              },
-            },
-            rePostOrderByUser: {
-              where: {
-                user: {
-                  followers: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-              },
-              include: {
-                user: true,
-              },
-            },
-            _count: {
-              select: {
-                bookmarkedByUser: true,
-                likedByUser: true,
-                rePostOrderByUser: true,
-                comments: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        }),
-      ]);
+      // const findFollowingPost = await this.postModel.findAndCountAll({
+      // where: {
+      //   [Op.or]: [
+      //     { '$users.userId$': userId }, // Find posts re-posted by the current user
+      //   ],
+      // },
+      //   include: [
+      //     {
+      //       model: UserModel,
+      //       as: 'user',
+      //       include: [
+      //         {
+      //           model: UserFollowModel,
+      //           as: 'followers',
+      //           where: {
+      //             followerId: userId,
+      //           },
+      //           // attributes: [],
+      //         },
+      //       ],
+      //     },
+      //   ],
+      // });
 
-      return formatListResponseObject({
-        rows: postList.map((post) => formatResponseListData(post)),
-        count: postCount,
-        limit,
-        offset,
-      });
+      // const findFollowingPost = await this.postModel.findAndCountAll({
+      //   where: {
+      //     [Op.or]: [
+      //       { '$user.followers.followerId$': userId },
+      //       // { '$rePost.rePostId$': 'PostModel.postId' },
+      //       { '$rePost.user.followers.followerId$': userId },
+      //     ],
+      //   },
+      //   include: [
+      //     {
+      //       model: UserModel,
+      //       as: 'user',
+      //       attributes: [],
+      //       include: [
+      //         {
+      //           model: UserFollowModel,
+      //           as: 'followers',
+      //           where: {
+      //             followerId: userId,
+      //           },
+      //           attributes: [],
+      //         },
+      //       ],
+      //     },
+      //     {
+      //       model: RePostModel,
+      //       as: 'rePost',
+      //       attributes: [],
+      //       include: [
+      //         {
+      //           model: UserModel,
+      //           as: 'user',
+      //           attributes: [],
+      //           include: [
+      //             {
+      //               model: UserFollowModel,
+      //               as: 'followers',
+      //               where: {
+      //                 followerId: userId,
+      //               },
+      //               attributes: [],
+      //             },
+      //           ],
+      //         },
+      //       ],
+      //     },
+      //   ],
+      // order: [
+      //   [Sequelize.literal('`rePost`.`createdAt`'), 'DESC'], // Order by createdAt from RePostModel
+      //   [Sequelize.literal('`PostModel`.`createdAt`'), 'DESC'], // Order by createdAt from PostModel
+      // ],
+      // });
+
+      // TODO raw sequelize SQL
+
+      const response = await this.sequelize.query(
+        findMeFollowingPostAndRePost({ userId, limit, offset }),
+        {
+          nest: true,
+        },
+      );
+
+      const postCount = await this.sequelize.query(
+        findMeFollowingPostAndRePostCount(userId),
+        {
+          plain: true,
+        },
+      );
+
+      return {
+        count: postCount.count,
+        rows: response,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
+      };
     } catch (err) {
       console.log(err);
     }

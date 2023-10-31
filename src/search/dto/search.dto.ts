@@ -11,7 +11,7 @@ export class GetSearchQueryParamsWithFilter extends PaginationQueryParams {
 
   @ApiProperty({
     required: false,
-    default: SearchType.latest,
+    default: SearchType.用戶,
     enum: SearchType,
   })
   @IsEnum(SearchType)

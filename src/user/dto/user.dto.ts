@@ -14,7 +14,7 @@ export class UserResponse extends TimeStamp {
   lastName: string;
   email: string;
   userName: string;
-  image: string;
+  avatar: string;
   bio: string;
   description: string;
   isVerified: boolean;
@@ -26,7 +26,7 @@ export const UserResponseExampleDTO: UserResponse = {
   lastName: 'Mui',
   email: 'example@gmail.com',
   userName: 'HowardMui',
-  image: 'www.example.com',
+  avatar: 'example.jpg',
   bio: 'string',
   description: 'string',
   isVerified: false,

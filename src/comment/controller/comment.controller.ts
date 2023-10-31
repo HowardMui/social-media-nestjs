@@ -11,12 +11,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CommentService } from './comment.service';
+import { CommentService } from '../services/comment.service';
 import {
   CreateCommentDTO,
   GetAllPostCommentParams,
   GetCommentInOnePostResponse,
-} from './dto';
+} from '../dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
@@ -61,5 +61,34 @@ export class CommentController {
   @ApiOperation({ summary: 'Delete one comment. Admin Only' })
   deleteOnePostComment(@Param('commentId') commentId: number) {
     return this.commentService.deleteOneComment(commentId);
+  }
+
+  // * like comment
+  @Post('comment/:commentId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  @ApiOperation({ summary: 'Like a comment. App User only' })
+  likeAComment(
+    @Param('commentId', new ParseIntPipe()) commentId: number,
+    @Req() req: Request,
+  ) {
+    return this.commentService.likeACommentByUser(
+      commentId,
+      req.user['userId'],
+    );
+  }
+
+  @Delete('comment/:commentId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.User)
+  @ApiOperation({ summary: 'UnLike a comment. App User only' })
+  unLikeAPost(
+    @Param('commentId', new ParseIntPipe()) commentId: number,
+    @Req() req: Request,
+  ) {
+    return this.commentService.unLikeACommentByUser(
+      commentId,
+      req.user['userId'],
+    );
   }
 }

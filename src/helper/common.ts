@@ -36,6 +36,24 @@ export const returnAscOrDescInQueryParamsWithFilter = (
   return tempObject;
 };
 
+export const orderByFilter = (asc: string, desc: string) => {
+  const order = [];
+
+  if (!asc && !desc) {
+    return undefined;
+  }
+
+  if (asc) {
+    order.push([asc, 'ASC']);
+  }
+
+  if (desc) {
+    order.push([desc, 'DESC']);
+  }
+
+  return order;
+};
+
 interface FormatListResponseType<T> {
   rows: T;
   count?: number;

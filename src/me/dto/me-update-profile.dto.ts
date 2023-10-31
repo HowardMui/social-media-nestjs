@@ -12,12 +12,12 @@ export class UpdateMeProfileDTO {
   @IsOptional()
   @IsString()
   @MaxLength(20)
-  LastName?: string;
+  lastName?: string;
 
   @ApiProperty()
   @IsOptional()
   @IsString()
-  image?: string;
+  avatar?: string;
 
   @ApiProperty()
   @IsOptional()

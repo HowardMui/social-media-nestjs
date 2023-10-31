@@ -1,110 +1,96 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaSrcService } from 'src/prisma-src/prisma-src.service';
 import {
   CreateOneTagDTO,
   GetAllTagQueryParamsWithFilter,
   UpdateOneTagDTO,
 } from './dto';
+import { InjectModel } from '@nestjs/sequelize';
+import { PostTagModel, TagModel } from 'src/models';
+import { errorHandler } from 'src/error-handler';
+import { Sequelize } from 'sequelize-typescript';
+import { countPostWithTagName, getOneTagName } from 'src/rawSQLquery';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class TagService {
-  constructor(private prisma: PrismaSrcService) {}
+  constructor(
+    @InjectModel(TagModel)
+    private tagModel: typeof TagModel,
+    @InjectModel(PostTagModel)
+    private postTagModel: typeof PostTagModel,
+    private sequelize: Sequelize,
+  ) {}
 
   async getAllTagList(query: GetAllTagQueryParamsWithFilter) {
     const { limit, offset, tagName } = query;
-    console.log(tagName);
+
+    const tagNameFilter: {
+      tagName?: { [x: symbol]: string };
+    } = {};
+
+    if (tagName) {
+      tagNameFilter.tagName = { [Op.startsWith]: tagName };
+    }
 
     try {
-      const [totalTags, tagList] = await this.prisma.$transaction([
-        this.prisma.tag.count({
-          where: {
-            tagName: {
-              contains: tagName ? tagName : undefined,
-            },
-          },
-        }),
-        this.prisma.tag.findMany({
-          where: tagName
-            ? {
-                OR: [
-                  {
-                    tagName: {
-                      contains: tagName,
-                    },
-                  },
-                ],
-              }
-            : undefined,
-          include: {
-            _count: {
-              select: {
-                posts: true,
-              },
-            },
-          },
-          orderBy: { tagId: 'desc' },
-          skip: offset || 0,
-          take: limit || 20,
-        }),
-      ]);
+      const { count, rows } = await this.tagModel.findAndCountAll({
+        where: tagNameFilter,
+        limit: limit ?? 20,
+        offset: offset ?? 0,
+      });
 
-      const formatListResult = {
-        count: totalTags,
-        rows: tagList.map(({ _count, ...rest }) => {
-          return { ...rest, postCount: _count.posts };
-        }),
-        limit: limit ?? 0,
-        offset: offset ?? 20,
+      return {
+        count,
+        rows,
+        limit,
+        offset,
       };
-
-      return formatListResult;
     } catch (err) {
       console.log(err);
     }
   }
 
   // * May be remove (Don't know usage)
-  // async getOneTag(tagName: string) {
-  //   try {
-  //     const findTag = await this.prisma.tag.findUnique({
-  //       where: {
-  //         tagName,
-  //       },
-  //       include: {
-  //         posts: true,
-  //       },
-  //     });
-
-  //     if (!findTag) {
-  //       return new NotFoundException();
-  //     }
-  //     return findTag;
-  //   } catch (err) {
-  //     console.log(err);
-  //   }
-  // }
-
   async getPostListInOneTag(query, tagName: string) {
     const { limit, offset } = query;
     try {
-      const findTag = await this.prisma.tag.findUnique({
+      const findTag = await this.tagModel.findOne({
         where: {
           tagName,
-        },
-        include: {
-          posts: {
-            skip: offset || 0,
-            take: limit || 20,
-          },
         },
       });
 
       if (!findTag) {
-        return new NotFoundException();
+        return new NotFoundException('Tag does not exist');
       }
-      return findTag;
+
+      const postCount = await this.sequelize.query(
+        countPostWithTagName(tagName),
+        {
+          plain: true,
+        },
+      );
+
+      const rows = await this.sequelize.query(
+        getOneTagName({
+          limit,
+          offset,
+          tagName,
+        }),
+        {
+          nest: true,
+        },
+      );
+
+      return {
+        count: postCount.count,
+        rows,
+        limit,
+        offset,
+      };
     } catch (err) {
       console.log(err);
+      return errorHandler(err);
     }
   }
 
@@ -112,46 +98,48 @@ export class TagService {
     const { postId, tagName } = body;
 
     try {
-      return await this.prisma.tag.upsert({
-        // if found, update.  if not, create it
-        where: { tagName },
-        create: {
-          tagName,
-          // postCount: postId.length,
-          posts: {
-            connect: postId.map((id) => ({ postId: id })),
+      await this.sequelize.transaction(async (t) => {
+        const transactionHost = { transaction: t };
+
+        const createdTag = await this.tagModel.create(
+          {
+            tagName,
           },
-        },
-        update: {
-          // postCount: postId.length,
-          posts: {
-            set: postId.map((id) => ({ postId: id })),
-          },
-        },
+          transactionHost,
+        );
+
+        await this.postTagModel.bulkCreate(
+          postId.map((id) => {
+            return {
+              postId: id,
+              tagId: createdTag.tagId,
+            };
+          }),
+          transactionHost,
+        );
       });
+
+      return { status: HttpStatus.CREATED };
     } catch (err) {
       console.log(err);
-      if (err.code === 'P2025' || err.code === 'P2016') {
-        throw new NotFoundException('Post do not exist');
-      }
+      return errorHandler(err);
     }
   }
 
   async updateOneTag(tagNameParam: string, body: UpdateOneTagDTO) {
-    const { postId, tagName } = body;
+    const { tagName } = body;
     try {
-      await this.prisma.tag.update({
-        where: {
-          tagName: tagNameParam,
-        },
-        data: {
+      await this.tagModel.update(
+        {
           tagName,
-          // postCount: postId.length,
-          posts: {
-            set: postId.map((id) => ({ postId: id })),
+        },
+        {
+          where: {
+            tagName: tagNameParam,
           },
         },
-      });
+      );
+      return { status: HttpStatus.OK, message: 'Updated' };
     } catch (err) {
       console.log(err);
       if (err.code === 'P2025' || err.code === 'P2016') {
@@ -162,17 +150,16 @@ export class TagService {
 
   async deleteOneTag(tagName: string) {
     try {
-      await this.prisma.tag.delete({
+      await this.tagModel.destroy({
         where: {
           tagName,
         },
       });
+
       return { status: HttpStatus.OK, message: 'Deleted' };
     } catch (err) {
       console.log(err);
-      if (err.code === 'P2025' || err.code === 'P2016') {
-        throw new NotFoundException('Tag do not exist');
-      }
+      return errorHandler(err);
     }
   }
 }

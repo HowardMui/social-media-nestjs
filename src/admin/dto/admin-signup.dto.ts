@@ -7,10 +7,10 @@ export class AdminSignUpDTO {
   @MaxLength(20)
   displayName: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
-  @MaxLength(20)
-  loginName: string;
+  // @ApiProperty()
+  // @IsNotEmpty()
+  // @MaxLength(20)
+  // loginName: string;
 
   @ApiProperty()
   @IsEmail()
