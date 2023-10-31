@@ -11,14 +11,29 @@ export class GetUserListQueryParams extends QueryParamsWithFilter {
 export class UserResponse extends TimeStamp {
   userId: number;
   firstName: string;
-  LastName: string;
+  lastName: string;
   email: string;
   userName: string;
-  image: string;
+  avatar: string;
   bio: string;
   description: string;
   isVerified: boolean;
 }
+
+export const UserResponseExampleDTO: UserResponse = {
+  userId: 0,
+  firstName: 'Howard',
+  lastName: 'Mui',
+  email: 'example@gmail.com',
+  userName: 'HowardMui',
+  avatar: 'example.jpg',
+  bio: 'string',
+  description: 'string',
+  isVerified: false,
+  createdAt: 'string',
+  updatedAt: 'string',
+  deletedAt: 'string',
+};
 
 export class GetUserListResponse extends UserResponse {
   followersCount: number;

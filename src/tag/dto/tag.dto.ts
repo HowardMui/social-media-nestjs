@@ -1,6 +1,6 @@
 import { IsOptional, IsString } from 'class-validator';
 import { PostResponse } from 'src/post/dto';
-import { PaginationQueryParams } from 'src/types';
+import { PaginationQueryParams, TimeStamp } from 'src/types';
 
 export class GetAllTagQueryParamsWithFilter extends PaginationQueryParams {
   @IsString()
@@ -8,7 +8,14 @@ export class GetAllTagQueryParamsWithFilter extends PaginationQueryParams {
   tagName?: string;
 }
 
-export class GetAllTagResponse {
+export class Tag {
+  tagId: number;
+  tagName: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export class GetAllTagResponse implements Omit<TimeStamp, 'deletedAt'> {
   tagId: number;
   tagName: string;
   postCount: number;

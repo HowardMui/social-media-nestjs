@@ -35,3 +35,39 @@ export const returnAscOrDescInQueryParamsWithFilter = (
 
   return tempObject;
 };
+
+export const orderByFilter = (asc: string, desc: string) => {
+  const order = [];
+
+  if (!asc && !desc) {
+    return undefined;
+  }
+
+  if (asc) {
+    order.push([asc, 'ASC']);
+  }
+
+  if (desc) {
+    order.push([desc, 'DESC']);
+  }
+
+  return order;
+};
+
+interface FormatListResponseType<T> {
+  rows: T;
+  count?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export const formatListResponseObject = <T>(
+  params: FormatListResponseType<T>,
+) => {
+  return {
+    count: params.count,
+    rows: params.rows,
+    limit: params.limit ?? 20,
+    offset: params.offset ?? 0,
+  };
+};

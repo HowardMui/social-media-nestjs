@@ -1,3 +1,4 @@
+import { PostResponse } from 'src/post/dto';
 import { QueryParamsWithFilter, TimeStamp } from 'src/types';
 import { UserResponse } from 'src/user/dto';
 
@@ -5,7 +6,6 @@ export class GetAllPostCommentParams extends QueryParamsWithFilter {}
 
 export class BaseCommentObject extends TimeStamp {
   commentId: number;
-  //   comments: BaseCommentObject[];
   message: string;
   user: UserResponse;
   userId: number;
@@ -13,6 +13,10 @@ export class BaseCommentObject extends TimeStamp {
   parentCommentId: number | null;
 }
 
-export class GetCommentInOnePostResponse extends BaseCommentObject {
+export class CommentWithPostAndParentComment extends BaseCommentObject {
   comments: BaseCommentObject[];
+  post: PostResponse;
+  parentComment?: BaseCommentObject | null;
 }
+
+export class GetCommentInOnePostResponse extends CommentWithPostAndParentComment {}

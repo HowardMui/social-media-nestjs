@@ -3,7 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PrismaSrcService } from '../../prisma-src/prisma-src.service';
+import { InjectModel } from '@nestjs/sequelize';
+import {
+  AdminAuthModel,
+  AdminModel,
+  UserAuthModel,
+  UserModel,
+} from 'src/models';
 
 interface JwtPayload {
   userId?: number;
@@ -15,7 +21,13 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(config: ConfigService, private prisma: PrismaSrcService) {
+  constructor(
+    config: ConfigService,
+    @InjectModel(UserModel)
+    private userModel: typeof UserModel,
+    @InjectModel(AdminModel)
+    private adminModel: typeof AdminModel,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (req: Request) => {
@@ -33,19 +45,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: JwtPayload) {
     const { userId, adminId } = payload;
     if (userId) {
-      const user = await this.prisma.user.findUnique({
-        where: {
-          userId,
-        },
+      return await this.userModel.findByPk(userId, {
+        include: [UserAuthModel],
       });
-      return user;
     } else if (adminId) {
-      const admin = await this.prisma.admin.findUnique({
-        where: {
-          adminId,
-        },
+      return await this.adminModel.findByPk(adminId, {
+        include: [AdminAuthModel],
       });
-      return admin;
     }
   }
 }

@@ -6,19 +6,12 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 
-import {
-  ApiOkResponse,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import {
   GetOneUserResponse,
@@ -27,7 +20,6 @@ import {
 } from './dto';
 import { Roles } from 'src/auth/role-guard/roles.decorator';
 import { Role, RolesGuard } from 'src/auth/role-guard/roles.guard';
-import { Request } from 'express';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 import { GetOneUserPostResponse, GetUserPostQuery } from './dto/user-post.dto';
@@ -90,37 +82,5 @@ export class UserController {
   @ApiOperation({ summary: 'Delete one user. Admin Only' })
   deleteOneUser(@Param('userId') userId: number) {
     return this.userService.deleteOneUser(userId);
-  }
-
-  // Follow user action ---------------------------------------------------------------------------------------------------
-
-  @Post(':userId/follow')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({ summary: 'Follow one user. User Only' })
-  @ApiResponse({
-    status: 201,
-    description: 'Followed user',
-  })
-  followOneUser(
-    @Param('userId', new ParseIntPipe()) userId: number,
-    @Req() req: Request,
-  ) {
-    return this.userService.followOneUser(userId, req.user['userId']);
-  }
-
-  @Delete(':userId/unfollow')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({ summary: 'UnFollow one user. User Only' })
-  @ApiResponse({
-    status: 201,
-    description: 'UnFollowed user',
-  })
-  unFollowOneUser(
-    @Param('userId', new ParseIntPipe()) userId: number,
-    @Req() req: Request,
-  ) {
-    return this.userService.unFollowOneUser(userId, req.user['userId']);
   }
 }

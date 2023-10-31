@@ -1,70 +1,94 @@
-import {
-  BadRequestException,
-  HttpStatus,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { PrismaSrcService } from '../prisma-src/prisma-src.service';
-import { GetUserListQueryParams } from './dto';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { GetOneUserResponse, GetUserListQueryParams } from './dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
-import { returnAscOrDescInQueryParamsWithFilter } from 'src/helper';
+import {
+  formatListResponseObject,
+  orderByFilter,
+  returnAscOrDescInQueryParamsWithFilter,
+} from 'src/helper';
 import { GetUserPostEnum, GetUserPostQuery } from './dto/user-post.dto';
-import { PostResponse } from 'src/post/dto';
+import { RedisService } from 'src/redis/redis.service';
+import { InjectModel } from '@nestjs/sequelize';
+import {
+  LikePostModel,
+  PostModel,
+  TagModel,
+  UserFollowModel,
+  UserModel,
+} from 'src/models';
+import { Sequelize } from 'sequelize-typescript';
+
+import { errorHandler } from 'src/error-handler';
+import { userPostAndRePost, userPostAndRePostCount } from 'src/rawSQLquery';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaSrcService) {}
+  constructor(
+    private redis: RedisService,
+    @InjectModel(UserModel)
+    private userModel: typeof UserModel,
+    @InjectModel(PostModel)
+    private postModel: typeof PostModel,
+    private sequelize: Sequelize,
+  ) {}
 
   // * User CRUD ------------------------------------------------------------------------------------------------
 
   async getUserList(query: GetUserListQueryParams) {
     const { limit, offset, userName, asc, desc } = query;
 
+    const userNameCondition: {
+      userName?: { [x: symbol]: string };
+    } = {};
+
+    if (userName) {
+      userNameCondition.userName = { [Op.substring]: userName };
+    }
+
     try {
-      const [totalUsers, userList] = await this.prisma.$transaction([
-        this.prisma.user.count({
-          where: {
-            userName: {
-              contains: userName ? userName : undefined,
-            },
-          },
-        }),
-        this.prisma.user.findMany({
-          where: {
-            userName: {
-              contains: userName ? userName : undefined,
-            },
-          },
-          orderBy: returnAscOrDescInQueryParamsWithFilter(asc, desc) || {
-            userId: 'desc',
-          },
-          skip: offset ?? 0,
-          take: limit ?? 20,
-          include: {
-            _count: {
-              select: {
-                followers: true,
-                following: true,
-              },
-            },
-          },
-        }),
-      ]);
-
-      const transformedUserList = userList.map(({ _count, ...user }) => ({
-        ...user,
-        followersCount: _count.followers,
-        followingCount: _count.following,
-      }));
-
-      const returnObject = {
-        count: totalUsers,
-        rows: transformedUserList,
+      const { count, rows } = await this.userModel.findAndCountAll({
+        distinct: true,
         limit: limit ?? 20,
         offset: offset ?? 0,
-      };
+        where: userNameCondition,
+        order: orderByFilter(asc, desc) ?? [['userId', 'DESC']],
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followerId = UserModel.userId)`,
+              ),
+              'followingCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followingId = UserModel.userId)`,
+              ),
+              'followerCount',
+            ],
+          ],
+        },
+        include: [
+          {
+            model: UserFollowModel,
+            as: 'following',
+            attributes: [],
+          },
+          {
+            model: UserFollowModel,
+            as: 'followers',
+            attributes: [],
+          },
+        ],
+      });
 
-      return returnObject;
+      return {
+        count,
+        rows,
+        limit,
+        offset,
+      };
     } catch (err) {
       console.log(err);
     }
@@ -72,31 +96,51 @@ export class UserService {
 
   async getOneUser(userId: number) {
     try {
-      const findOneUser = await this.prisma.user.findUnique({
-        where: {
-          userId,
+      // * gupf = get user profile
+      // const cacheUserProfile =
+      //   await this.redis.getRedisValue<GetOneUserResponse>(`gupf-u:${userId}`);
+      // if (cacheUserProfile) {
+      //   return cacheUserProfile;
+      // } else {
+      const user = await this.userModel.findByPk(userId, {
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followerId = UserModel.userId)`,
+              ),
+              'followingCount',
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM user_follows AS uf WHERE uf.followingId = UserModel.userId)`,
+              ),
+              'followerCount',
+            ],
+          ],
         },
-        include: {
-          _count: {
-            select: {
-              followers: true,
-              following: true,
-            },
+        include: [
+          {
+            model: UserFollowModel,
+            as: 'following',
+            attributes: [],
           },
-        },
+          {
+            model: UserFollowModel,
+            as: 'followers',
+            attributes: [],
+          },
+        ],
       });
-      if (!findOneUser) {
-        return new NotFoundException();
-      }
 
-      const { _count, ...user } = findOneUser;
+      return user;
 
-      const transformedUser = {
-        followingCount: _count.following,
-        followersCount: _count.followers,
-      };
-
-      return { ...user, ...transformedUser };
+      // await this.redis.setRedisValue(`gupf-u:${userId}`, {
+      //   ...user,
+      //   ...transformedUser,
+      // });
+      // return { ...user, ...transformedUser };
+      // }
     } catch (err) {
       console.log(err);
     }
@@ -110,238 +154,176 @@ export class UserService {
         // * Find user's post and rePosts
         case GetUserPostEnum.Posts:
         default:
-          const postsQuery = await this.prisma.$queryRaw<
-            { count: number; rows: PostResponse[] }[]
-          >`
-          WITH "Posts" AS (
-            SELECT "Post".*, pt."tags",
-              COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
-              COALESCE(lc.likesCount::integer, 0) AS "likesCount",
-              COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
-            FROM "User"
-            LEFT JOIN "user_rePost_posts" ON "User"."userId" = "user_rePost_posts"."userId"
-            LEFT JOIN "Post" ON "Post"."postId" = "user_rePost_posts"."postId"
-            LEFT JOIN (
-              SELECT "Post"."postId", 
-              CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
-                ELSE '[]' END AS "tags"
-              FROM "Post"
-            LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-            LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-              GROUP BY "Post"."postId"
-            ) pt ON pt."postId" = "Post"."postId"
-            LEFT JOIN (
-              SELECT
-                "postId",
-                COUNT(*) AS commentsCount
-              FROM
-                "Comment"
-              GROUP BY
-                "postId"
-              ) pc ON pc."postId" = "Post"."postId"
-            LEFT JOIN (
-              SELECT
-                "postId",
-                COUNT(*) AS likesCount
-              FROM
-                "user_liked_posts"
-              GROUP BY
-                "postId"
-              ) lc ON lc."postId" = "Post"."postId"
-            LEFT JOIN (
-              SELECT
-                "postId",
-                COUNT(*) AS rePostsCount
-              FROM
-                "user_rePost_posts"
-              GROUP BY
-                "postId"
-              ) rc ON rc."postId" = "Post"."postId"
-            WHERE "User"."userId" = ${userId}
-            -- // * UNION All (Combine two different table and query)
-            UNION ALL
-            SELECT "Post".*, pt."tags",
-              COALESCE(pc.commentsCount::integer, 0) AS "commentsCount",
-              COALESCE(lc.likesCount::integer, 0) AS "likesCount",
-              COALESCE(rc.rePostsCount::integer, 0) AS "rePostsCount"
-            FROM "User"
-            LEFT JOIN "Post" ON "Post"."userId" = "User"."userId"
-            LEFT JOIN (
-            SELECT "Post"."postId", 
-            CASE WHEN COUNT("Tag"."tagId") > 0 THEN JSON_AGG("Tag"."tagName")
-              ELSE '[]' END AS "tags"
-            FROM "Post"
-            LEFT OUTER JOIN "_PostTags" ON "Post"."postId" = "_PostTags"."A"
-            LEFT OUTER JOIN "Tag" ON "_PostTags"."B" = "Tag"."tagId"
-            GROUP BY "Post"."postId"
-            ) pt ON pt."postId" = "Post"."postId"
-            LEFT JOIN (
-              SELECT
-                "postId",
-                COUNT(*) AS commentsCount
-              FROM
-                "Comment"
-              GROUP BY
-                "postId"
-              ) pc ON pc."postId" = "Post"."postId"
-            LEFT JOIN (
-            SELECT
-              "postId",
-              COUNT(*) AS likesCount
-            FROM
-              "user_liked_posts"
-            GROUP BY
-              "postId"
-            ) lc ON lc."postId" = "Post"."postId"
-            LEFT JOIN (
-            SELECT
-              "postId",
-              COUNT(*) AS rePostsCount
-            FROM
-              "user_rePost_posts"
-            GROUP BY
-              "postId"
-            ) rc ON rc."postId" = "Post"."postId"
-            WHERE "User"."userId" = ${userId}
-            -- ORDER BY "createdAt" DESC
-            -- LIMIT ${limit || 20}
-            -- OFFSET ${offset || 0}
-          ),
-          -- // * find out the query and filter it
-          "PaginatedPosts" AS (
-          SELECT *
-          FROM "Posts"
-          ORDER BY "createdAt" DESC
-          LIMIT ${limit || 20}
-          OFFSET ${offset || 0}
-          ),
-          -- // * reform the the data into rows and count (count form the Posts -> avoid involve into the pagination)
-          "AggregatedPosts" AS (
-            SELECT json_agg("PaginatedPosts") AS "rows", (SELECT COUNT(*) FROM "Posts")::integer AS "count"
-            FROM "PaginatedPosts"
-          )
-          SELECT "count", "rows"
-          FROM "AggregatedPosts"
-        `;
+          const response = await this.sequelize.query(
+            userPostAndRePost({ userId, limit, offset }),
+            {
+              nest: true,
+            },
+          );
 
-          const returnPostObject = {
-            count: postsQuery[0].count,
-            rows: postsQuery[0].rows,
-            limit,
-            offset,
+          const postCount = await this.sequelize.query(
+            userPostAndRePostCount(userId),
+            {
+              plain: true,
+            },
+          );
+
+          return {
+            count: postCount.count,
+            rows: response,
+            limit: limit ?? 20,
+            offset: offset ?? 0,
           };
-          return returnPostObject;
 
         // * Find user liked post
         case GetUserPostEnum.Likes:
-          const [likedPostCount, userLikedList] =
-            await this.prisma.$transaction([
-              this.prisma.userLikedPost.count({
-                where: {
-                  userId,
-                },
-              }),
-              this.prisma.userLikedPost.findMany({
-                where: {
-                  userId,
-                },
-                skip: offset ?? 0,
-                take: limit ?? 20,
-                select: {
-                  post: {
-                    include: {
-                      user: true,
-                      tags: true,
-                      _count: {
-                        select: {
-                          likedByUser: true,
-                          comments: true,
-                          bookmarkedByUser: true,
-                          rePostedByUser: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              }),
-            ]);
-
-          const transformedPosts = userLikedList.map(({ post }) => {
-            const { _count, ...rest } = post;
-            return {
-              ...rest,
-              tags: post.tags.map((t) => t.tagName),
-              likedCount: _count.likedByUser,
-              commentCount: _count.comments,
-              bookmarkedCount: _count.bookmarkedByUser,
-              rePostedCount: _count.rePostedByUser,
-            };
+          const likePosts = await this.postModel.findAndCountAll({
+            distinct: true,
+            limit: limit ?? 20,
+            offset: offset ?? 0,
+            attributes: {
+              include: [
+                [
+                  Sequelize.literal(
+                    `(SELECT COUNT(*) FROM user_rePost AS rp WHERE rp.postId = PostModel.postId)`,
+                  ),
+                  'rePostCount',
+                ],
+                [
+                  Sequelize.literal(
+                    `(SELECT COUNT(*) FROM user_likePost AS lp WHERE lp.postId = PostModel.postId)`,
+                  ),
+                  'likedCount',
+                ],
+                [
+                  Sequelize.literal(
+                    `(SELECT COUNT(*) FROM user_bookmarkPost AS bp WHERE bp.postId = PostModel.postId)`,
+                  ),
+                  'bookmarkedCount',
+                ],
+                [
+                  Sequelize.literal(
+                    `(COALESCE(
+                  (SELECT
+                  JSON_ARRAYAGG(t.tagName)
+                  FROM tag AS t INNER JOIN post_tag AS pt ON t.tagId = pt.tagId WHERE pt.postId = PostModel.postId),
+                  CAST('[]' AS JSON))
+                  )`,
+                  ),
+                  'tags',
+                ],
+              ],
+            },
+            include: [
+              {
+                model: UserModel,
+                where: { userId },
+                as: 'likedPostByUser',
+                attributes: [],
+              },
+              {
+                model: UserModel,
+                as: 'rePostedByUser',
+                attributes: [],
+              },
+              {
+                model: UserModel,
+                as: 'bookmarkedPostByUser',
+                attributes: [],
+              },
+              {
+                model: TagModel,
+                attributes: [],
+              },
+              {
+                model: UserModel,
+                as: 'user',
+              },
+            ],
+            order: [
+              [
+                { model: UserModel, as: 'likedPostByUser' },
+                LikePostModel,
+                'createdAt',
+                'desc',
+              ],
+            ],
           });
 
-          const returnLikedPostObject = {
-            count: likedPostCount,
-            rows: transformedPosts,
+          return {
+            count: likePosts.count,
+            rows: likePosts.rows,
             limit: limit ?? 0,
             offset: offset ?? 20,
           };
-
-          return returnLikedPostObject;
 
         // * Find user replied post
         case GetUserPostEnum.Replies:
-          const countTheCommentWithGroupBy = this.prisma.comment.groupBy({
-            by: ['postId'],
-            where: {
-              userId,
-            },
-          });
+        // const countTheCommentWithGroupBy = this.prisma.comment.groupBy({
+        //   by: ['postId'],
+        //   where: {
+        //     userId,
+        //   },
+        // });
 
-          const [commentedPostList, commentedPostCount] =
-            await this.prisma.$transaction([
-              this.prisma.comment.findMany({
-                where: {
-                  userId,
-                },
-                distinct: ['postId'],
-                select: {
-                  post: {
-                    include: {
-                      user: true,
-                      tags: true,
-                      _count: {
-                        select: {
-                          likedByUser: true,
-                          comments: true,
-                          bookmarkedByUser: true,
-                          rePostedByUser: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              }),
-              countTheCommentWithGroupBy,
-            ]);
+        // const [commentedPostCount, commentedPostList] =
+        //   await this.prisma.$transaction([
+        //     countTheCommentWithGroupBy,
+        //     this.prisma.comment.findMany({
+        //       where: {
+        //         userId,
+        //       },
+        //       distinct: ['postId'],
+        //       select: {
+        //         post: {
+        //           include: {
+        //             user: true,
+        //             tags: true,
+        //             comments: {
+        //               where: {
+        //                 userId,
+        //               },
+        //               include: {
+        //                 parentComment: {
+        //                   include: {
+        //                     user: true,
+        //                   },
+        //                 },
+        //               },
+        //             },
+        //             _count: {
+        //               select: {
+        //                 likedByUser: true,
+        //                 comments: true,
+        //                 bookmarkedByUser: true,
+        //                 rePostOrderByUser: true,
+        //               },
+        //             },
+        //           },
+        //         },
+        //       },
+        //     }),
+        //   ]);
 
-          const transformCommentedPosts = commentedPostList.map(({ post }) => {
-            const { _count, ...rest } = post;
-            return {
-              ...rest,
-              tags: post.tags.map((t) => t.tagName),
-              likedCount: _count.likedByUser,
-              commentCount: _count.comments,
-              bookmarkedCount: _count.bookmarkedByUser,
-              rePostedCount: _count.rePostedByUser,
-            };
-          });
+        // const transformCommentedPosts = commentedPostList.map(({ post }) => {
+        //   const { _count, ...rest } = post;
+        //   return {
+        //     ...rest,
+        //     tags: post.tags.map((t) => t.tagName),
+        //     likedCount: _count.likedByUser,
+        //     commentCount: _count.comments,
+        //     bookmarkedCount: _count.bookmarkedByUser,
+        //     rePostedCount: _count.rePostOrderByUser,
+        //   };
+        // });
 
-          const returnCommentedPostObject = {
-            count: commentedPostCount.length,
-            rows: transformCommentedPosts,
-            limit: limit ?? 0,
-            offset: offset ?? 20,
-          };
-          return returnCommentedPostObject;
+        // const returnCommentedPostObject = {
+        //   count: commentedPostCount.length,
+        //   rows: transformCommentedPosts,
+        //   limit: limit ?? 0,
+        //   offset: offset ?? 20,
+        // };
+        // return returnCommentedPostObject;
       }
     } catch (err) {
       console.log(err);
@@ -350,18 +332,25 @@ export class UserService {
 
   async updateOneUser(userId: number, dto: UpdateUserDTO) {
     try {
-      return await this.prisma.user.update({
-        where: { userId },
-        data: dto,
-      });
+      return await this.userModel.update(
+        {
+          ...dto,
+        },
+        {
+          where: {
+            userId,
+          },
+        },
+      );
     } catch (err) {
       console.log(err);
+      return errorHandler(err);
     }
   }
 
   async deleteOneUser(userId: number) {
     try {
-      await this.prisma.user.delete({
+      await this.userModel.destroy({
         where: {
           userId,
         },
@@ -369,62 +358,7 @@ export class UserService {
       return { status: HttpStatus.OK };
     } catch (err) {
       console.log(err);
-    }
-  }
-
-  // * Follow user action ---------------------------------------------------------------------------------------------------
-
-  async followOneUser(wannaFollowId: number, currentUserId: number) {
-    try {
-      if (wannaFollowId === currentUserId) {
-        return new BadRequestException('Cannot follow yourself');
-      }
-
-      await this.prisma.user.update({
-        where: {
-          userId: wannaFollowId,
-        },
-        data: {
-          followers: {
-            connect: {
-              userId: currentUserId,
-            },
-          },
-        },
-      });
-      return 'Followed user';
-    } catch (err) {
-      console.log(err);
-      if (err.code === 'P2016') {
-        throw new NotFoundException('User do not exist');
-      }
-    }
-  }
-
-  async unFollowOneUser(wannaUnFollowId: number, currentUserId: number) {
-    try {
-      if (wannaUnFollowId === currentUserId) {
-        return new BadRequestException('Cannot unfollow yourself');
-      }
-
-      await this.prisma.user.update({
-        where: {
-          userId: wannaUnFollowId,
-        },
-        data: {
-          followers: {
-            disconnect: {
-              userId: currentUserId,
-            },
-          },
-        },
-      });
-      return 'UnFollowed user';
-    } catch (err) {
-      console.log(err);
-      if (err.code === 'P2025') {
-        throw new NotFoundException('User do not exist');
-      }
+      return errorHandler(err);
     }
   }
 }

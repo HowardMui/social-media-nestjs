@@ -21,6 +21,7 @@ import {
   CreatePostDTO,
   GetPostQueryParamsWithFilter,
   PostResponse,
+  UpdatePostDTO,
 } from './dto';
 import { ApiOkResponsePaginated } from 'src/types/decorator/generic.decorator';
 
@@ -60,10 +61,13 @@ export class PostController {
 
   @Patch(':postId')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({ summary: 'Update one post. App User only (Not yet finish)' })
-  updateUserPost(@Param('postId', new ParseIntPipe()) postId: number) {
-    return null;
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Update one post. Admin only' })
+  updateUserPost(
+    @Param('postId', new ParseIntPipe()) postId: number,
+    @Body() body: UpdatePostDTO,
+  ) {
+    return this.postService.updateOnePost(body, postId);
   }
 
   @Delete(':postId')
@@ -72,62 +76,5 @@ export class PostController {
   @ApiOperation({ summary: 'Delete one post. Admin only' })
   deleteUserPost(@Param('postId', new ParseIntPipe()) postId: number) {
     return this.postService.deleteOnePost(postId);
-  }
-
-  // * Like a post ------------------------------------------------------------------------------------
-
-  @Post(':postId/like')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({ summary: 'Like a post. App User only' })
-  likeAPost(
-    @Param('postId', new ParseIntPipe()) postId: number,
-    @Req() req: Request,
-  ) {
-    return this.postService.likeAPostByUser(postId, req.user['userId']);
-  }
-
-  @Delete(':postId/like')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({ summary: 'UnLike a post. App User only' })
-  unLikeAPost(
-    @Param('postId', new ParseIntPipe()) postId: number,
-    @Req() req: Request,
-  ) {
-    return this.postService.unLikeAPost(postId, req.user['userId']);
-  }
-
-  // * Share a post to current User Blog ------------------------------------------------------------------------------------
-
-  @Post(':postId/repost')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({
-    summary: 'RePost a post to current User blog. App User only',
-  })
-  rePostToCurrentUserBlog(
-    @Param('postId', new ParseIntPipe()) postId: number,
-    @Req() req: Request,
-  ) {
-    return this.postService.rePostAPostToCurrentUserBlog(
-      postId,
-      req.user['userId'],
-    );
-  }
-
-  // * cancel a post to current User Blog ------------------------------------------------------------------------------------
-
-  @Delete(':postId/repost')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(Role.User)
-  @ApiOperation({
-    summary: 'Cancel RePost a post. App User only',
-  })
-  cancelRePostAPost(
-    @Param('postId', new ParseIntPipe()) postId: number,
-    @Req() req: Request,
-  ) {
-    return this.postService.cancelRePostAPost(postId, req.user['userId']);
   }
 }

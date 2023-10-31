@@ -6,7 +6,7 @@ export class UpdateOneTagDTO {
   @MaxLength(30)
   tagName: string;
 
-  @ApiProperty({ type: [Number] })
-  @IsArray()
-  postId: number[];
+  // @ApiProperty({ type: [Number] })
+  // @IsArray()
+  // postId: number[];
 }

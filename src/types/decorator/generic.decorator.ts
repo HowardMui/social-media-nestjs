@@ -1,9 +1,9 @@
 import { Type, applyDecorators } from '@nestjs/common';
 import { ApiExtraModels, ApiOkResponse, getSchemaPath } from '@nestjs/swagger';
-// import { CustomResWithQueryType } from '../common.dto';
 
 export const ApiOkResponsePaginated = <DataDto extends Type<any>>(
   dataDto: DataDto,
+  noCount?: boolean,
 ) =>
   applyDecorators(
     ApiExtraModels(dataDto),
@@ -11,19 +11,30 @@ export const ApiOkResponsePaginated = <DataDto extends Type<any>>(
       schema: {
         allOf: [
           //   { $ref: getSchemaPath(CustomResWithQueryType) },
-          {
-            properties: {
-              count: {
-                type: 'number',
+          noCount
+            ? {
+                properties: {
+                  rows: {
+                    type: 'array',
+                    items: { $ref: getSchemaPath(dataDto) },
+                  },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                },
+              }
+            : {
+                properties: {
+                  count: {
+                    type: 'number',
+                  },
+                  rows: {
+                    type: 'array',
+                    items: { $ref: getSchemaPath(dataDto) },
+                  },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                },
               },
-              rows: {
-                type: 'array',
-                items: { $ref: getSchemaPath(dataDto) },
-              },
-              limit: { type: 'number' },
-              offset: { type: 'number' },
-            },
-          },
         ],
       },
     }),

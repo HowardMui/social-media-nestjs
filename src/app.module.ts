@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
-import { PrismaSrcModule } from './prisma-src/prisma-src.module';
 import { ConfigModule } from '@nestjs/config';
 import { MeModule } from './me/me.module';
 import { AdminModule } from './admin/admin.module';
@@ -14,15 +13,20 @@ import { FileModule } from './file/file.module';
 import { TagModule } from './tag/tag.module';
 import { SearchModule } from './search/search.module';
 import { CronjobsModule } from './cronjobs/cronjobs.module';
-import { CustomCacheModule } from './cache/custom-cache.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
+import { LikePostModule } from './like-post/like-post.module';
+import { SharePostModule } from './share-post/share-post.module';
+import { FollowUserActionModule } from './follow-user-action/follow-user-action.module';
+import { SequelizeSrcModule } from './sequelize-src/sequelize-src.module';
+import { JwtStrategy } from './auth/strategy';
+import { SequelizeModule } from '@nestjs/sequelize';
+import { AdminModel, UserModel } from './models';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, cache: true }),
-    UserModule,
-    PrismaSrcModule,
     MeModule,
+    UserModule,
     AdminModule,
     PostModule,
     CommentModule,
@@ -33,9 +37,13 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
     SearchModule,
     CronjobsModule,
     RateLimitModule,
-    CustomCacheModule,
+    LikePostModule,
+    SharePostModule,
+    FollowUserActionModule,
+    SequelizeSrcModule,
+    SequelizeModule.forFeature([UserModel, AdminModel]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, JwtStrategy],
 })
 export class AppModule {}

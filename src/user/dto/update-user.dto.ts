@@ -9,7 +9,7 @@ export class UpdateUserDTO {
   @IsOptional()
   @IsString()
   @Max(20, { message: 'Maximum 20 chars' })
-  LastName?: string;
+  lastName?: string;
 
   @IsOptional()
   @IsString()
